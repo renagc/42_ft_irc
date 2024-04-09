@@ -1,5 +1,8 @@
 .DS_Store
 
+# exclude executable
+ircserv
+
 # exclude objects folder
 objs/
 objs/*
