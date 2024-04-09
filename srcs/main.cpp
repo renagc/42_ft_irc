@@ -25,6 +25,14 @@
 
 #include "Server.hpp"
 
+// bool server_status = true;
+
+// void sigIntHandler( int wnum )
+// {
+// 	(void)wnum;
+// 	server_status = false;
+// }
+
 int main(int ac, char **av)
 {
 	try
@@ -32,8 +40,7 @@ int main(int ac, char **av)
 		if (ac != 3)
 			throw std::runtime_error("Usage: ./ircserv <port> <password>");
 		Server serv(av[1], av[2]);
-		serv.socketBind();
-		serv.listener();
+		serv.start();
 	}
 	catch(const std::exception& e)
 	{

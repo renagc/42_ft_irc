@@ -1,1 +1,9 @@
 .DS_Store
+
+# exclude objects folder
+objs/
+objs/*
+
+# exclude example tests
+examples/
+examples/*

@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX := c++
-CXXFLAGS := -std=c++98 -Wall -Wextra -Werror
+CXXFLAGS := -std=c++98 -Wall -Wextra -Werror -fsanitize=address -g
 
 # Directories
 SRCDIR := srcs
@@ -37,5 +37,11 @@ fclean: clean
 	@echo "$(TARGET) removed"
 
 re: fclean all
+
+valgrind: re
+	valgrind --track-origins=yes --leak-check=full --show-leak-kinds=all ./ircserv 1025 pw
+
+run: re
+	./ircserv 1025 pw
 
 .PHONY: clean
