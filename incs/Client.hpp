@@ -2,6 +2,8 @@
 # define CLIENT_HPP
 
 # include <iostream>
+# include <iomanip>
+# include <vector>
 
 class Client
 {
@@ -16,13 +18,13 @@ class Client
 		Client( int fd , int id );
 		~Client();
 
-		/* main member function */
-		void				start( void );
-
 		/* get funcs */
-		int					getId( void ) const;
-		const std::string	&getUser( void ) const;
-		const std::string	&getNick( void ) const;
+		int							getId( void ) const;
+		const std::string			&getUser( void ) const;
+		const std::string			&getNick( void ) const;
+		
+		/* logs */
+		void						printPrivate( void ) const;
 };
 
 #endif

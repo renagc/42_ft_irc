@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-Server::Server(std::string port, std::string pw) : _port(port), _nconections(0)
+Server::Server(std::string port, std::string pw) : _port(port), _next_id(0)
 {
 	int portv = std::atoi(port.c_str());
 	if (portv <= PORT_MIN_VALUE || portv >= PORT_MAX_VALUE)
@@ -23,9 +23,9 @@ Server::Server(std::string port, std::string pw) : _port(port), _nconections(0)
 
 Server::~Server()
 {
-	// for (unsigned long i = 0; i < _pfds.size(); i++)
-	// 	close(_pfds[i].fd);
-	// _pfds.clear();
+	for (unsigned long i = 0; i < _pfds.size(); i++)
+		close(_pfds[i].fd);
+	_pfds.clear();
 
 	if (_sockfd)
 		close(_sockfd);
@@ -36,30 +36,10 @@ void Server::start()
 {
 	try
 	{
-		// create a socket on machine
-		this->createSocket();
-
-		// bind that socket
-		this->bindSocket();
-
-		// listen on that socket
+		_sockfd = this->createSocket();
+		this->bindSocket(_sockfd);
 		this->listenSocket();
-
 		this->startPoll();
-
-		// while(1) {  // main accept() loop
-		// 	try
-		// 	{
-		// 		new_fd = this->acceptConnection();
-		// 		this->sendData(new_fd, std::string("Welcome! Are you there?\n"));
-		// 	}
-		// 	catch(const std::exception& e)
-		// 	{
-		// 		std::cerr << e.what() << '\n';
-		// 	}
-		// 	// if (new_fd != -1)
-		// 	// 	close(new_fd);
-		// }
 	}
 	catch(const std::exception& e)
 	{
@@ -67,18 +47,20 @@ void Server::start()
 	}
 }
 
-void Server::createSocket()
+int Server::createSocket()
 {
-	int	yes=1;
+	int		sockfd;
+	int		yes=1;
 
-	this->_sockfd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
-	if (_sockfd == -1)
+	sockfd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
+	if (sockfd == -1)
 		throw std::runtime_error("socket: failed");
-	if (setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
 		throw std::runtime_error("socketopt");
+	return (sockfd);
 }
 
-void Server::bindSocket()
+void Server::bindSocket( int sockfd )
 {
 	struct addrinfo		*p;
 
@@ -86,13 +68,13 @@ void Server::bindSocket()
 	{
 		try
 		{
-			if (bind(_sockfd, p->ai_addr, p->ai_addrlen) == -1)
+			if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
 				throw std::runtime_error("server: bind failed");
 			break ;
 		}
 		catch(const std::exception& e)
 		{
-			close(_sockfd);
+			close(sockfd);
 			std::cerr << e.what() << '\n';
 		}
 	}
@@ -111,7 +93,7 @@ void Server::listenSocket()
 	listener.fd = _sockfd;
 	listener.events = POLLIN; // report ready to read on incoming session
 	_pfds.push_back(listener);
-	log("server is listening...");
+	log(std::string("server is listening on localhost:").append(_port));
 }
 
 
@@ -128,15 +110,11 @@ int Server::acceptConnection( void )
 	if (new_fd == -1)
 		throw std::runtime_error("accept failed");
 	log(std::string("got connection from ").append(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
-	_nconections++;
 	return (new_fd);
 }
 
 void Server::startPoll( void )
 {
-	struct pollfd	temp;
-	char buf[256];    // Buffer for client data
-
 	while(1)
 	{
         int poll_count = poll(&_pfds[0], _pfds.size(), -1);
@@ -155,47 +133,132 @@ void Server::startPoll( void )
 			{
 				// We got one!!
                 if (_pfds[i].fd == _sockfd) // If listener is ready to read, handle new connection
-				{
-					temp.fd = this->acceptConnection();
-					temp.events = POLLIN;
-                    _pfds.push_back(temp);
-                }
+					this->newConnection();
 				else
-				{
-                    // just a regular client
-                    int nbytes = recv(_pfds[i].fd, buf, sizeof(buf), 0);
-                    int sender_fd = _pfds[i].fd;
-
-                    if (nbytes <= 0) // Got error or connection closed by client
-					{
-                        if (nbytes == 0)
-                            log("client disconnected");
-						else
-                            log("recv");
-                        close(_pfds[i].fd); // Bye!
-                        _pfds.erase(_pfds.begin() + i);
-                    }
-					else
-					{
-                        // We got some good data from a client
-                        for(unsigned long j = 0; j < _pfds.size(); j++)
-						{
-                            // Send to everyone!
-                            int dest_fd = _pfds[j].fd;
-
-                            // Except the listener and ourselves
-                            if (dest_fd != _sockfd && dest_fd != sender_fd) {
-                                if (send(dest_fd, buf, nbytes, 0) == -1) {
-                                    perror("send");
-                                }
-                            }
-                        }
-                    }
-                } // END handle data from client
+					this->knownConnection( i );
             } // END got ready-to-read from poll()
         } // END looping through file descriptors
     } // END for(;;)--and you thought it would never end!
 }
+
+void Server::newConnection( void )
+{
+	pollfd	temp;
+
+	temp.fd = this->acceptConnection();
+	temp.events = POLLIN;
+	_pfds.push_back(temp);
+
+	std::map<int, Client>::iterator	it = _clients.find(temp.fd);
+	if (it != _clients.end())
+	{
+		log("new client added");
+		debug();
+		return ;
+	}	
+	Client	new_client( temp.fd, _next_id++ );
+	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
+	log("new client added");
+	debug();
+	send(temp.fd, "welcome to ft_irc!\n", 19, 0);
+}
+
+
+void Server::knownConnection( int id )
+{
+	char			buf[256];
+	std::string		msg;
+
+	int				sender_fd = _pfds[id].fd;
+	size_t			nbytes = recv(sender_fd, buf, sizeof(buf), 0);
+
+	std::cout << nbytes << " bytes received" << std::endl;
+
+	if (nbytes <= 0) // Got error or connection closed by client
+	{
+		if (nbytes == 0) // client disconnected sucessfully
+			log("client disconnected");
+		else
+			log("recv");
+		close(sender_fd); // close current client fd
+
+		/* remove client from vector and erase channel and remove pollfd */
+		std::map<int, Client>::iterator it = _clients.find(sender_fd);
+		for (unsigned long i = 0; i < _channels.size(); i++)
+			_channels[i].removeClient(&it->second);
+		_clients.erase(it);
+		_pfds.erase(_pfds.begin() + id);
+		debug();
+	}
+	else
+	{
+		msg.append(buf);
+		if (msg.compare("JOIN\n") == 0)
+		{
+			Channel *what_channel = findChannel("test");
+			Client	*client = &_clients.find(_pfds[id].fd)->second;
+	
+			if (what_channel)
+			{
+				if (what_channel->getAdmin() == client)
+				{
+					std::cout << " you are the admin of the channel" << std::endl;
+					return;
+				}
+				std::vector<Client *>	temp = what_channel->getClients();
+				for (unsigned long i = 0; i < temp.size(); i++)
+				{
+					if (client == temp[i])
+					{
+						std::cout << " you are already in channel" << std::endl;
+						return ;
+					}
+				}
+				what_channel->add(client);
+				return ;
+			}
+			Channel	newchannel("test", client);
+			_channels.push_back(newchannel);
+			std::cout << " channel '" << newchannel.getName() << "' created and administrator is " << newchannel.getAdmin() << std::endl;
+			newchannel.printClients();
+			return ;
+		}
+		// We got some good data from a client
+		for (unsigned long k = 0; k < _channels.size(); k++)
+		{
+			if (!_channels[k].findClient(&_clients.find(_pfds[id].fd)->second))
+			{
+				std::cout << _channels[k].getName() << " noooooot " << std::endl;
+				continue ;
+			}
+			for(unsigned long j = 1; j < _pfds.size(); j++)
+			{
+				// Send to everyone!
+				int dest_fd = _pfds[j].fd;
+
+				// Except the listener and ourselves
+				if (	dest_fd != _sockfd && \
+						dest_fd != sender_fd && \
+						_channels[k].findClient(&_clients.find(dest_fd)->second))
+				{
+					if (send(dest_fd, buf, nbytes, 0) == -1)
+						perror("send");
+				}
+			}
+		}
+	}
+}
+
+Channel *Server::findChannel( const std::string &name )
+{
+	for (unsigned long i = 0; i < _channels.size(); i++)
+	{
+		if (!_channels[i].getName().compare(name))
+			return(&_channels[i]);
+	}
+	return (NULL);
+}
+
 
 
 
@@ -208,6 +271,12 @@ void Server::sendData( int sockfd , const std::string &msg)
 
 void Server::log( std::string str )
 {
+	printLocalTime();
+	std::cout << " | " << "server: " << str << std::endl;
+}
+
+void Server::printLocalTime( void )
+{
 	time_t rawtime;
 	struct tm *timeinfo;
 
@@ -219,6 +288,16 @@ void Server::log( std::string str )
 				timeinfo->tm_zone << " " << \
 				timeinfo->tm_hour << ":" << \
 				timeinfo->tm_min << ":" << \
-				timeinfo->tm_sec << " | " << \
-				"server: " << str << std::endl;
+				timeinfo->tm_sec;
+}
+
+void Server::debug( void )
+{
+	log("debugging users:");
+
+	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); it++)
+		it->second.printPrivate();
+	
+	for (unsigned long i = 0; i < _channels.size(); i++)
+		_channels[i].printPrivate();
 }
