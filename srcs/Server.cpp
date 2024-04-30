@@ -195,17 +195,17 @@ void Server::knownConnection( int id )
 		msg.append(buf);
 		if (msg.compare("JOIN\n") == 0)
 		{
-			Channel *what_channel = findChannel("test");
+			Channel *channel = findChannel("test");
 			Client	*client = &_clients.find(_pfds[id].fd)->second;
 	
-			if (what_channel)
+			if (channel)
 			{
-				if (what_channel->getAdmin() == client)
+				if (channel->getAdmin() == client)
 				{
 					std::cout << " you are the admin of the channel" << std::endl;
 					return;
 				}
-				std::vector<Client *>	temp = what_channel->getClients();
+				std::vector<Client *> temp = channel->getClients();
 				for (unsigned long i = 0; i < temp.size(); i++)
 				{
 					if (client == temp[i])
@@ -214,7 +214,7 @@ void Server::knownConnection( int id )
 						return ;
 					}
 				}
-				what_channel->add(client);
+				channel->add(client);
 				return ;
 			}
 			Channel	newchannel("test", client);
