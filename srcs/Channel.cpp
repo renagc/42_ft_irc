@@ -31,15 +31,10 @@ std::vector<std::string>	Channel::getNicknames( void ) const {
 std::vector<Client *> Channel::getClients( void ) const { return(_clients); }
 bool	Channel::findClient( Client *client ) const
 {
-	std::cout << _clients.size() << std::endl;
 	for (unsigned long i = 0; i < _clients.size(); i++)
 	{
-		std::cout << _clients[i] << " vs " << client << std::endl;
 		if (_clients[i] == client)
-		{
-			std::cout << " found" << std::endl;
 			return (true);
-		}
 	}
 	return (false);
 }
@@ -84,3 +79,6 @@ void Channel::removeClient( Client *client )
 	if (it != _clients.end())
 		_clients.erase(it);
 }
+
+void Channel::setId( int id ){ _id = id; }
+int Channel::getId( void ) const { return(_id); }

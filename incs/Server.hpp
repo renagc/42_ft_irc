@@ -50,18 +50,22 @@ class Client;
 class Server
 {
 	private:
-		std::string					_port;
-		struct addrinfo				*_servinfo;
-		int							_sockfd;
-		std::vector<pollfd>			_pfds;
-		std::map<int, Client>		_clients;
-		std::vector<Channel>		_channels;
-		int							_next_id;
+		std::string							_port;
+		struct addrinfo						*_servinfo;
+		int									_sockfd;
+		std::vector<pollfd>					_pfds;
+		std::map<int, Client>				_clients;
+		std::map<std::string, Channel>		_channels;
 
+
+		int									_next_client_id;
+		int									_next_channel_id;
 
 		/* debug */
 		void						printLocalTime( void );
-		void						log( std::string str );
+		void						log( const std::string &str );
+		void						log( const std::string &str, int id, const std::string &name );
+		void						log( const std::string &str, const std::string &from, const std::string &to );
 		void						debug( void );
 
 
@@ -85,15 +89,16 @@ class Server
 		void				sendData( int sockfd, const std::string &info );
 
 		// poll functions
-		void				newConnection( void );
+		void				clientConnection( void );
 		void				knownConnection( int id );
+		void				handleDataSender( const std::string &msg, Client *sender );
 
-		void				clientDisconnect( bool success, int fd );
+		// client functions
+		Client				*findClientByFd( int fd );
+		void				clientDisconnect( Client *client );
 
-
-		// find channel
-		Channel		*findChannel( const std::string &name );
-		bool		sameChannel( Client *src, Client *dst );
+		// channel functions
+		void				createChannel( const std::string &name, Client *admin );
 
 		/* exceptions */
 		class ServerPortException : public std::exception

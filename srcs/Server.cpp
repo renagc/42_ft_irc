@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-Server::Server(std::string port, std::string pw) : _port(port), _next_id(0)
+Server::Server(std::string port, std::string pw) : _port(port), _next_client_id(0), _next_channel_id(0)
 {
 	int portv = std::atoi(port.c_str());
 	if (portv <= PORT_MIN_VALUE || portv >= PORT_MAX_VALUE)
@@ -96,8 +96,6 @@ void Server::listenSocket()
 	log(std::string("server is listening on localhost:").append(_port));
 }
 
-
-
 /*  This function only works for ipv4 -- NEED TO REVIEW */
 int Server::acceptConnection( void )
 {
@@ -133,7 +131,7 @@ void Server::startPoll( void )
 			{
 				// We got one!!
                 if (_pfds[i].fd == _sockfd) // If listener is ready to read, handle new connection
-					this->newConnection();
+					this->clientConnection();
 				else
 					this->knownConnection( i );
             } // END got ready-to-read from poll()
@@ -141,7 +139,7 @@ void Server::startPoll( void )
     } // END for(;;)--and you thought it would never end!
 }
 
-void Server::newConnection( void )
+void Server::clientConnection( void )
 {
 	pollfd	temp;
 
@@ -151,116 +149,173 @@ void Server::newConnection( void )
 
 	std::map<int, Client>::iterator	it = _clients.find(temp.fd);
 	if (it != _clients.end())
-	{
-		log("new client added");
-		debug();
 		return ;
-	}	
-	Client	new_client( temp.fd, _next_id++ );
+	Client	new_client( temp.fd, _next_client_id++ );
 	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
-	log("new client added");
-	debug();
+	log("new client added", new_client.getId(), new_client.getNick());
 	send(temp.fd, "welcome to ft_irc!\n", 19, 0);
+}
+
+Client *Server::findClientByFd( int fd )
+{
+	Client *client = NULL;
+	std::map<int, Client>::iterator it_client = _clients.find(fd);
+	if (it_client != _clients.end())
+		client = &it_client->second;
+	return (client);
+}
+
+
+// this function removes a client from the server and their channels
+void Server::clientDisconnect( Client *client )
+{
+	// loop channels to remove client from all channels
+	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+		it->second.removeClient(client);
+
+	// close client fd
+	close(client->getFd());
+
+	// loop clients to remove the client
+	std::map<int, Client>::iterator it;
+	for (it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (&it->second == client)
+			break ;
+	}
+
+	// loop pfds to stop from poll
+	unsigned long i = 0;
+	for (; i < _pfds.size(); i++)
+	{
+		if(_pfds[i].fd == client->getFd())
+			break ;
+	}
+
+	_pfds.erase(_pfds.begin() + i);
+	_clients.erase(it);
+}
+
+void Server::createChannel( const std::string &name, Client *admin )
+{
+	Channel	newchannel("test", admin);
+	newchannel.setId(_next_channel_id++);
+	_channels.insert(std::pair<std::string, Channel>(name, newchannel));
+	log("channel created", newchannel.getId(), newchannel.getName());
+}
+
+
+void Server::handleDataSender( const std::string &msg, Client *sender )
+{
+	// We got some good data from a client
+	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+	{
+		if (!it->second.findClient(sender))
+			continue ;
+		for(unsigned long j = 1; j < _pfds.size(); j++)
+		{
+			// Send to everyone!
+			int dest_fd = _pfds[j].fd;
+			Client *client = &_clients.find(dest_fd)->second;
+
+			// Except the listener and ourselves
+			if (	dest_fd != _sockfd && \
+					dest_fd != sender->getFd() && \
+					it->second.findClient(client))
+			{
+				if (send(dest_fd, msg.c_str(), msg.size(), 0) == -1)
+					perror("send");
+				else
+					log("data sent", sender->getNick(), client->getNick());
+			}
+		}
+		debug();
+	}
 }
 
 
 void Server::knownConnection( int id )
 {
 	char			buf[256];
-	std::string		msg;
-
 	int				sender_fd = _pfds[id].fd;
 	size_t			nbytes = recv(sender_fd, buf, sizeof(buf), 0);
+	Client			*client = findClientByFd(sender_fd);
 
-	std::cout << nbytes << " bytes received" << std::endl;
-
+	std::string		msg;
 	if (nbytes <= 0) // Got error or connection closed by client
 	{
-		if (nbytes == 0) // client disconnected sucessfully
-			log("client disconnected");
+		if (nbytes == 0)
+			log("client disconnected", client->getId(), client->getNick());
 		else
 			log("recv");
-		close(sender_fd); // close current client fd
-
-		/* remove client from vector and erase channel and remove pollfd */
-		std::map<int, Client>::iterator it = _clients.find(sender_fd);
-		for (unsigned long i = 0; i < _channels.size(); i++)
-			_channels[i].removeClient(&it->second);
-		_clients.erase(it);
-		_pfds.erase(_pfds.begin() + id);
-		debug();
+		clientDisconnect(client);
 	}
 	else
 	{
-		msg.append(buf);
+		msg.assign(buf, nbytes);
 		if (msg.compare("JOIN\n") == 0)
 		{
-			Channel *channel = findChannel("test");
-			Client	*client = &_clients.find(_pfds[id].fd)->second;
-	
+			std::map<int, Client>::iterator it_client = _clients.find(sender_fd);
+			std::map<std::string, Channel>::iterator it_channel = _channels.find("test");
+
+			Channel *channel = NULL;
+			Client *client = NULL;
+			if (it_client != _clients.end())
+				client = &it_client->second;
+			if (it_channel != _channels.end())
+				channel = &it_channel->second;
 			if (channel)
 			{
-				if (channel->getAdmin() == client)
-				{
-					std::cout << " you are the admin of the channel" << std::endl;
+				if (channel->getAdmin() == client) // client or sender is the admin
 					return;
-				}
 				std::vector<Client *> temp = channel->getClients();
 				for (unsigned long i = 0; i < temp.size(); i++)
 				{
-					if (client == temp[i])
+					if (client == temp[i]) // client or sender is already in channel
 					{
-						std::cout << " you are already in channel" << std::endl;
 						return ;
 					}
 				}
 				channel->add(client);
 				return ;
 			}
-			Channel	newchannel("test", client);
-			_channels.push_back(newchannel);
-			std::cout << " channel '" << newchannel.getName() << "' created and administrator is " << newchannel.getAdmin() << std::endl;
-			newchannel.printClients();
+			createChannel("test", client);
 			return ;
 		}
-		// We got some good data from a client
-		for (unsigned long k = 0; k < _channels.size(); k++)
+		else if (msg.compare("PARA\n") == 0)
 		{
-			if (!_channels[k].findClient(&_clients.find(_pfds[id].fd)->second))
-			{
-				std::cout << _channels[k].getName() << " noooooot " << std::endl;
-				continue ;
-			}
-			for(unsigned long j = 1; j < _pfds.size(); j++)
-			{
-				// Send to everyone!
-				int dest_fd = _pfds[j].fd;
+			std::map<int, Client>::iterator it_client = _clients.find(sender_fd);
+			std::map<std::string, Channel>::iterator it_channel = _channels.find("para");
 
-				// Except the listener and ourselves
-				if (	dest_fd != _sockfd && \
-						dest_fd != sender_fd && \
-						_channels[k].findClient(&_clients.find(dest_fd)->second))
+			Channel *channel = NULL;
+			Client *client = NULL;
+			if (it_client != _clients.end())
+				client = &it_client->second;
+			if (it_channel != _channels.end())
+				channel = &it_channel->second;
+			if (channel)
+			{
+				if (channel->getAdmin() == client) // client or sender is the admin
 				{
-					if (send(dest_fd, buf, nbytes, 0) == -1)
-						perror("send");
+					return;
 				}
+				std::vector<Client *> temp = channel->getClients();
+				for (unsigned long i = 0; i < temp.size(); i++)
+				{
+					if (client == temp[i]) // client or sender is already in channel
+					{
+						return ;
+					}
+				}
+				channel->add(client);
+				return ;
 			}
+			createChannel("para", client);
+			return ;
 		}
+		handleDataSender(msg, client);
 	}
 }
-
-Channel *Server::findChannel( const std::string &name )
-{
-	for (unsigned long i = 0; i < _channels.size(); i++)
-	{
-		if (!_channels[i].getName().compare(name))
-			return(&_channels[i]);
-	}
-	return (NULL);
-}
-
-
-
 
 void Server::sendData( int sockfd , const std::string &msg)
 {
@@ -269,10 +324,22 @@ void Server::sendData( int sockfd , const std::string &msg)
 }
 
 
-void Server::log( std::string str )
+void Server::log( const std::string &str )
 {
 	printLocalTime();
 	std::cout << " | " << "server: " << str << std::endl;
+}
+
+void Server::log( const std::string &str, const std::string &from, const std::string &to )
+{
+	printLocalTime();
+	std::cout << " | " << "server: " << str << " from: " << from << ", to: " << to <<std::endl;
+}
+
+void Server::log( const std::string &str, int id, const std::string &name )
+{
+	printLocalTime();
+	std::cout << " | " << "server: " << str << " | id: " << id << ", name: " << name << std::endl;
 }
 
 void Server::printLocalTime( void )
@@ -294,10 +361,9 @@ void Server::printLocalTime( void )
 void Server::debug( void )
 {
 	log("debugging users:");
-
 	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); it++)
 		it->second.printPrivate();
-	
-	for (unsigned long i = 0; i < _channels.size(); i++)
-		_channels[i].printPrivate();
+
+	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+		it->second.printPrivate();
 }

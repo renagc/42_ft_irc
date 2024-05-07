@@ -6,6 +6,8 @@
 
 # include "Client.hpp"
 
+class Client;
+
 class Channel
 {
 	private:
@@ -23,10 +25,14 @@ class Channel
 		void							add( Client *client );
 
 		/* get funcs */
+		int								getId( void ) const;
 		const std::string				&getName( void ) const;
 		const Client					*getAdmin( void ) const;
 		std::vector<std::string>		getNicknames( void ) const;
 		std::vector<Client *>			getClients( void ) const;
+
+		/* set funcs */
+		void							setId( int id );
 
 		bool							findClient( Client *client ) const;
 		void							removeClient( Client *client );
