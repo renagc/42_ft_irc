@@ -99,6 +99,7 @@ class Server
 
 		// channel functions
 		void				createChannel( const std::string &name, Client *admin );
+		Client				*getClient( const std::string &nickname );
 
 		/* exceptions */
 		class ServerPortException : public std::exception

@@ -14,7 +14,16 @@ class Channel
 		int						_id;
 		std::string				_name;
 		std::vector<Client *>	_clients;
-		Client					*_admin;
+		std::string				_pw;
+		int						_limit;
+		std::string				_topic;
+
+		/* flags */
+		std::vector<Client *>	_operators;
+		bool					_i; // Set/remove Invite-only channel
+		bool					_t; // Set/remove the restrictions of the TOPIC command to channel operators
+		bool					_k; // Set/remove the channel key (password)
+		bool					_l; // Set/remove the user limit to channel
 		
 	public:
 		/* Constructor*/
@@ -27,9 +36,21 @@ class Channel
 		/* get funcs */
 		int								getId( void ) const;
 		const std::string				&getName( void ) const;
-		const Client					*getAdmin( void ) const;
 		std::vector<std::string>		getNicknames( void ) const;
 		std::vector<Client *>			getClients( void ) const;
+		std::vector<Client *>			getOperators( void ) const;
+
+		const bool						&getI( void ) const;
+		const bool						&getT( void ) const;
+		const bool						&getK( void ) const;
+		const bool						&getL( void ) const;
+		void							addOperator( Client *client );
+		void							removeOperator( Client *client );
+
+		void							setT( const bool &i );
+		void							setI( const bool &t );
+		void							setK( const bool &k );
+		void							setL( const bool &l );
 
 		/* set funcs */
 		void							setId( int id );

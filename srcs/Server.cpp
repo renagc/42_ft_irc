@@ -153,7 +153,7 @@ void Server::clientConnection( void )
 	Client	new_client( temp.fd, _next_client_id++ );
 	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
 	log("new client added", new_client.getId(), new_client.getNick());
-	send(temp.fd, "welcome to ft_irc!\n", 19, 0);
+	send(temp.fd, "003 " + "", 40, 0);
 }
 
 Client *Server::findClientByFd( int fd )
@@ -253,66 +253,36 @@ void Server::knownConnection( int id )
 	else
 	{
 		msg.assign(buf, nbytes);
-		if (msg.compare("JOIN\n") == 0)
-		{
-			std::map<int, Client>::iterator it_client = _clients.find(sender_fd);
-			std::map<std::string, Channel>::iterator it_channel = _channels.find("test");
+		std::cout << msg << std::endl;
+		// if (msg.compare("JOIN\n") == 0)
+		// {
+		// 	std::map<int, Client>::iterator it_client = _clients.find(sender_fd);
+		// 	std::map<std::string, Channel>::iterator it_channel = _channels.find("test");
 
-			Channel *channel = NULL;
-			Client *client = NULL;
-			if (it_client != _clients.end())
-				client = &it_client->second;
-			if (it_channel != _channels.end())
-				channel = &it_channel->second;
-			if (channel)
-			{
-				if (channel->getAdmin() == client) // client or sender is the admin
-					return;
-				std::vector<Client *> temp = channel->getClients();
-				for (unsigned long i = 0; i < temp.size(); i++)
-				{
-					if (client == temp[i]) // client or sender is already in channel
-					{
-						return ;
-					}
-				}
-				channel->add(client);
-				return ;
-			}
-			createChannel("test", client);
-			return ;
-		}
-		else if (msg.compare("PARA\n") == 0)
-		{
-			std::map<int, Client>::iterator it_client = _clients.find(sender_fd);
-			std::map<std::string, Channel>::iterator it_channel = _channels.find("para");
-
-			Channel *channel = NULL;
-			Client *client = NULL;
-			if (it_client != _clients.end())
-				client = &it_client->second;
-			if (it_channel != _channels.end())
-				channel = &it_channel->second;
-			if (channel)
-			{
-				if (channel->getAdmin() == client) // client or sender is the admin
-				{
-					return;
-				}
-				std::vector<Client *> temp = channel->getClients();
-				for (unsigned long i = 0; i < temp.size(); i++)
-				{
-					if (client == temp[i]) // client or sender is already in channel
-					{
-						return ;
-					}
-				}
-				channel->add(client);
-				return ;
-			}
-			createChannel("para", client);
-			return ;
-		}
+		// 	Channel *channel = NULL;
+		// 	Client *client = NULL;
+		// 	if (it_client != _clients.end())
+		// 		client = &it_client->second;
+		// 	if (it_channel != _channels.end())
+		// 		channel = &it_channel->second;
+		// 	if (channel)
+		// 	{
+		// 		if (channel->getAdmin() == client) // client or sender is the admin
+		// 			return;
+		// 		std::vector<Client *> temp = channel->getClients();
+		// 		for (unsigned long i = 0; i < temp.size(); i++)
+		// 		{
+		// 			if (client == temp[i]) // client or sender is already in channel
+		// 			{
+		// 				return ;
+		// 			}
+		// 		}
+		// 		channel->add(client);
+		// 		return ;
+		// 	}
+		// 	createChannel("test", client);
+		// 	return ;
+		// }
 		handleDataSender(msg, client);
 	}
 }
