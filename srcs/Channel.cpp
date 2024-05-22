@@ -10,6 +10,7 @@ Channel::Channel( const std::string &name, Client *admin ) : _name(name)
 	_t = false;
 	_k = false;
 	_l = false;
+	_limit = 0;
 }
 
 Channel::~Channel() {}
@@ -87,6 +88,7 @@ int Channel::getId( void ) const { return(_id); }
 
 std::vector<Client *> Channel::getOperators( void ) const { return(_operators); }
 void Channel::addOperator( Client *client ) { _operators.push_back(client); }
+void Channel::addClient( Client *client ) { _clients.push_back(client); }
 void Channel::removeOperator( Client *client )
 {
 	std::vector<Client *>::iterator it;
@@ -102,8 +104,12 @@ const bool &Channel::getI( void ) const { return(_i); }
 const bool &Channel::getT( void ) const { return(_t); }
 const bool &Channel::getK( void ) const { return(_k); }
 const bool &Channel::getL( void ) const { return(_l); }
+const int &Channel::getLimit( void ) const { return(_limit); }
 
 void Channel::setT( const bool &i ) { _i = i; }
 void Channel::setI( const bool &t ) { _t = t; }
 void Channel::setK( const bool &k ) { _k = k; }
 void Channel::setL( const bool &l ) { _l = l; }
+void Channel::setTopic( const std::string topic) { _topic = topic; }
+void Channel::setPW( const std::string pw) { _pw = pw; }
+void Channel::setLimit( const std::string limit) { _limit = limit; }

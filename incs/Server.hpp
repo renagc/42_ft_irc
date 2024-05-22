@@ -94,8 +94,10 @@ class Server
 		void				handleDataSender( const std::string &msg, Client *sender );
 
 		// client functions
-		Client				*findClientByFd( int fd );
-		void				clientDisconnect( Client *client );
+		Client							*findClientByFd( int fd );
+		void							clientDisconnect( Client *client );
+		Client							getClientByNick(std::string nickname) const; 
+		
 
 		// channel functions
 		void				createChannel( const std::string &name, Client *admin );

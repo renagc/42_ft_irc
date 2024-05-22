@@ -337,3 +337,11 @@ void Server::debug( void )
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		it->second.printPrivate();
 }
+
+Client	*Server::getClient( const std::string &nickname )
+{
+	for (std::map<int,Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+		if (nickname == (it->second.getNick()))
+			return (&it->second);
+	return (0);
+}

@@ -44,13 +44,18 @@ class Channel
 		const bool						&getT( void ) const;
 		const bool						&getK( void ) const;
 		const bool						&getL( void ) const;
+		const int						&getLimit( void ) const;
 		void							addOperator( Client *client );
+		void							addClient( Client *client );
 		void							removeOperator( Client *client );
 
 		void							setT( const bool &i );
 		void							setI( const bool &t );
 		void							setK( const bool &k );
 		void							setL( const bool &l );
+		void							setTopic(const std::string topic);
+		void							setPW(const std::string pw);
+		void							setLimit(const int limit);
 
 		/* set funcs */
 		void							setId( int id );
