@@ -40,7 +40,7 @@ int main(int ac, char **av)
 		if (ac != 3)
 			throw std::runtime_error("Usage: ./ircserv <port> <password>");
 		Server serv(av[1], av[2]);
-		serv.start();
+		serv.startListen();
 	}
 	catch(const std::exception& e)
 	{

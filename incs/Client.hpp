@@ -16,10 +16,12 @@ class Client
 		std::string		_user;
 		std::string		_nick;
 		Channel			*_curr_channel;
+		std::string		_host;
+		bool			_logged;
 		
 	public:
 		/* Constructor*/
-		Client( int fd , int id );
+		Client( int fd , int id, const std::string &host );
 		~Client();
 
 		/* get funcs */
@@ -28,9 +30,14 @@ class Client
 		const std::string			&getUser( void ) const;
 		const std::string			&getNick( void ) const;
 		Channel						*getCurrChannel( void ) const;
+		const std::string			&getHost( void ) const;
+		const bool					&getLogged( void ) const;
 		
 		/* set funcs */
 		void						setCurrChannel( Channel *channel );
+		void						setNick( const std::string &nick );
+		void						setUser( const std::string &user );
+		void						setLogged( bool logged );
 
 		/* logs */
 		void						printPrivate( void ) const;

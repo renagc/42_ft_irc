@@ -1,4 +1,4 @@
-#include "../incs/Channel.hpp"
+#include "Channel.hpp"
 
 /* constructors */
 Channel::Channel( const std::string &name, Client *admin ) : _name(name)
@@ -10,6 +10,7 @@ Channel::Channel( const std::string &name, Client *admin ) : _name(name)
 	_t = false;
 	_k = false;
 	_l = false;
+	_limit = -1;
 }
 
 Channel::~Channel() {}
@@ -102,6 +103,7 @@ const bool &Channel::getI( void ) const { return(_i); }
 const bool &Channel::getT( void ) const { return(_t); }
 const bool &Channel::getK( void ) const { return(_k); }
 const bool &Channel::getL( void ) const { return(_l); }
+const std::string &Channel::getTopic( void ) const { return(_topic); }
 
 void Channel::setT( const bool &i ) { _i = i; }
 void Channel::setI( const bool &t ) { _t = t; }

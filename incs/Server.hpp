@@ -24,9 +24,15 @@
 /*		IRC libs		*/
 # include "Client.hpp"
 # include "Channel.hpp"
+# include "Response.hpp"
+
+# include "Utils.hpp"
 
 # define PORT_MIN_VALUE 1023
 # define PORT_MAX_VALUE 65535
+
+# define DEBUG(str) std::cout << "debugging: " << str << std::endl;
+# define LOG(str) std::cout << "logging: " << str << std::endl;
 
 /*
 	Steps of a Server:
@@ -56,16 +62,13 @@ class Server
 		std::vector<pollfd>					_pfds;
 		std::map<int, Client>				_clients;
 		std::map<std::string, Channel>		_channels;
+		std::vector<std::string>			_commands;
 
 
 		int									_next_client_id;
 		int									_next_channel_id;
 
 		/* debug */
-		void						printLocalTime( void );
-		void						log( const std::string &str );
-		void						log( const std::string &str, int id, const std::string &name );
-		void						log( const std::string &str, const std::string &from, const std::string &to );
 		void						debug( void );
 
 
@@ -75,43 +78,38 @@ class Server
 
 		/* member functions */
 
-		// main function
-		void				start( void );
-
-		// steps to create a server
-		int					createSocket( void );
-		void				bindSocket( int sockfd );
-		void				listenSocket( void );
-		int					acceptConnection( void );
-
-		// help functions
-		void				startPoll( void );
-		void				sendData( int sockfd, const std::string &info );
+		// steps to create a server are: create a socket, bind the socket, listen on the socket
+		void							startListen( void );
 
 		// poll functions
-		void				clientConnection( void );
-		void				knownConnection( int id );
-		void				handleDataSender( const std::string &msg, Client *sender );
+		void							clientConnection( void );
+		void							authenticateChecker( Client *client );
+	
+		void							knownConnection( int id );
+		void							handleDataSender( const std::string &msg, Client *sender );
 
 		// client functions
-		Client				*findClientByFd( int fd );
-		void				clientDisconnect( Client *client );
+		Client							*findClientByFd( int fd );
+		void							clientDisconnect( Client *client );
 
 		// channel functions
-		void				createChannel( const std::string &name, Client *admin );
-		Client				*getClient( const std::string &nickname );
+		void							createChannel( const std::string &name, Client *admin );
+		Client							*getClient( const std::string &nickname );
 
-		/* exceptions */
-		class ServerPortException : public std::exception
-		{
-			public:
-				virtual const char *what() const throw() { return ("invalid port"); }
-		};
-		class ServerWeakPWException : public std::exception
-		{
-			public:
-				virtual const char *what() const throw() { return ("invalid password"); }
-		};
+		// command chooser
+		void							chooseCommand( Client *client, const std::vector<std::string> &cmd );
+
+		// command finder
+		void							findCommand( Client *client, const std::vector<std::string> &cmd );
+
+		// commands functions
+		void							joinCommand( Client *client, const std::string &channel_name );
+
+		// nick command
+		void									nickCommand( Client *client, const std::string &nickname );
+		std::map<int, Client>::iterator			findNick( const std::string &nick );
+
+		void									userCommand( Client *client, const std::string &username );
 };
 
 #endif
