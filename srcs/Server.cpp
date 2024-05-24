@@ -2,6 +2,7 @@
 
 Server::Server(std::string port, std::string pw) : _port(port), _next_client_id(0), _next_channel_id(0)
 {
+	_parsing = new Parser(this);
 	int portv = std::atoi(port.c_str());
 	if (portv <= PORT_MIN_VALUE || portv >= PORT_MAX_VALUE)
 		throw std::runtime_error("server port error");
@@ -203,14 +204,6 @@ void Server::handleDataSender( const std::string &msg, Client *sender )
 	}
 }
 
-void Server::authenticateChecker( Client *client )
-{
-	if (client->getNick().empty() || client->getUser().empty())
-		return ;
-	client->setLogged(true);
-	throw RPL_WELCOME(client->getNick(), client->getUser());
-}
-
 void Server::knownConnection( int id )
 {
 	char			buf[256];
@@ -236,45 +229,20 @@ void Server::knownConnection( int id )
 		for (it = parse.begin(); it != parse.end(); it++)
 		{
 			std::vector<std::string> cmd = split(*it, " ");
-			findCommand(client, cmd);
+			try {
+				_parsing->chooseParsing(client, cmd);
+			}
+			catch(const std::string& e) {
+				if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
+					log("send problem");
+			}
+			// findCommand(client, cmd);
 		}
-		handleDataSender(msg, client);
+		// handleDataSender(msg, client);
 	}
-}
-
-// command chooser
-void Server::chooseCommand( Client *client, const std::vector<std::string> &cmd )
-{
-	try
-	{
-		if (!cmd[0].compare("NICK"))
-			nickCommand(client, cmd[1]);
-		else if (!cmd[0].compare("USER"))
-			userCommand(client, cmd[1]);
-		else if (!cmd[0].compare("JOIN"))
-			joinCommand(client, cmd[1]);
-	}
-	catch(const std::string& e)
-	{
-		if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
-			log("send problem");
-	}
-}
-
-void Server::findCommand( Client *client, const std::vector<std::string> &cmd )
-{
-	std::vector<std::string>::iterator it = _commands.begin();
-	for (; it != _commands.end(); it++)
-	{
-		if (!cmd[0].compare(*it))
-			break ;
-	}
-	if (it != _commands.end())
-		chooseCommand(client, cmd);
 }
 
 // commands functions
-
 Client *Server::getClient( const std::string &nickname )
 {
 	std::map<int, Client>::iterator it;
@@ -288,77 +256,6 @@ Client *Server::getClient( const std::string &nickname )
 	return (&it->second);
 }
 
-// JOIN #channel need to implement all the error messages
-void Server::joinCommand( Client *client, const std::string &channel_name )
-{
-	DEBUG("joinCommand");
-	if (channel_name.empty() || channel_name.at(0) != '#')
-	{
-		log("no channel name given", client->getId());
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "JOIN");
-	}
-	Channel	*channel = NULL;
-	std::map<std::string, Channel>::iterator it = _channels.find(&channel_name[1]);
-	if (it != _channels.end())
-		channel = &it->second;
-	if (!channel)
-	{
-		createChannel(&channel_name[1], client);
-		channel = &_channels.find(&channel_name[1])->second;
-	}
-	if (client->getLogged())
-	{
-		channel->add(client);
-		log("client joined channel", client->getNick(), channel->getName());
-		throw RPL_JOIN(client->getNick(), client->getUser(), channel->getName());
-	}
-}
-
-std::map<int, Client>::iterator Server::findNick( const std::string &nick )
-{
-	std::map<int, Client>::iterator it;
-	for (it = _clients.begin(); it != _clients.end(); it++)
-	{
-		if (it->second.getNick() == nick)
-			break ;
-	}
-	return (it);
-}
-
-// atencao ao parsing que esta a dar erro
-void Server::nickCommand( Client *client, const std::string &nickname )
-{
-	
-	if (nickname.empty())
-	{
-		log(std::string("no nickname given"));
-		throw ERR_NONICKNAMEGIVEN(client->getNick());
-	}
-	std::map<int, Client>::iterator it = findNick(nickname);
-	if (it != _clients.end())
-	{
-		log(std::string("error nickname in use"));
-		throw ERR_NICKNAMEINUSE(client->getNick(), nickname);
-	}
-	client->setNick(nickname);
-	log(std::string("client changed nickname to: ").append(nickname), client->getId());
-	if (!client->getLogged())
-		authenticateChecker(client);
-}
-
-void Server::userCommand( Client *client, const std::string &username )
-{
-	if (username.empty())
-	{
-		log(std::string("no username or realname given"));
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "USER");
-	}
-	client->setUser(username);
-	log(std::string("client changed username to: ").append(username), client->getId());
-	if (!client->getLogged())
-		authenticateChecker(client);
-}
-
 void Server::debug( void )
 {
 	log("debugging users:");
@@ -368,3 +265,6 @@ void Server::debug( void )
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		it->second.printPrivate();
 }
+
+std::map<int, Client> &Server::getClients( void ) { return(_clients); }
+std::map<std::string, Channel> &Server::getChannels( void ) { return(_channels); }

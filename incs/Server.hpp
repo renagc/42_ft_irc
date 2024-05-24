@@ -11,7 +11,6 @@
 # include <unistd.h>
 # include <cstdio>
 # include <csignal>
-# include <csignal>
 # include <cstring>
 # include <netinet/in.h>
 # include <arpa/inet.h>
@@ -25,7 +24,6 @@
 # include "Client.hpp"
 # include "Channel.hpp"
 # include "Response.hpp"
-
 # include "Utils.hpp"
 
 # define PORT_MIN_VALUE 1023
@@ -34,24 +32,8 @@
 # define DEBUG(str) std::cout << "debugging: " << str << std::endl;
 # define LOG(str) std::cout << "logging: " << str << std::endl;
 
-/*
-	Steps of a Server:
-		initialization			getaddrinfo()
-		create a socket			socket()
-		bind a socket			bind()
-		listen on the socket	listen()
-		accept connection		accept()
-		send and receive data	send(), recv(), recvfrom(), sento()
-		disconnect				close()
-*/
-
-//		  uint32_t htonl(uint32_t hostlong);
-//        uint16_t htons(uint16_t hostshort);
-
-//        uint32_t ntohl(uint32_t netlong);
-//        uint16_t ntohs(uint16_t netshort);
-
 class Client;
+class Parser;
 
 class Server
 {
@@ -63,6 +45,7 @@ class Server
 		std::map<int, Client>				_clients;
 		std::map<std::string, Channel>		_channels;
 		std::vector<std::string>			_commands;
+		Parser								*_parsing;
 
 
 		int									_next_client_id;
@@ -70,7 +53,6 @@ class Server
 
 		/* debug */
 		void						debug( void );
-
 
 	public:
 		Server(std::string port, std::string pw);
@@ -110,6 +92,12 @@ class Server
 		std::map<int, Client>::iterator			findNick( const std::string &nick );
 
 		void									userCommand( Client *client, const std::string &username );
+
+		// get clients
+		std::map<int, Client>					&getClients( void );
+		std::map<std::string, Channel>			&getChannels( void );
 };
+
+# include "Parser.hpp"
 
 #endif

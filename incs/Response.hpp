@@ -20,6 +20,13 @@
 # define ERR_NEEDMOREPARAMS(nick, command) (":localhost 461 " + nick + " " + command + " :Not enough parameters" + "\r\n");
 
 // JOIN
-# define RPL_JOIN(nick, user, channel) (":" + nick + "!" + user + "@localhost JOIN #" + channel + "\r\n")
+# define RPL_JOIN(nick, user, channel) (":" + nick + "!" + user + "@localhost JOIN #" + channel + "\r\n");
+
+// PRIVMSG
+# define ERR_NOSUCHNICK(nick, target) (":localhost 401 " + nick + " " + target + " :No such nick/channel" + "\r\n");
+# define RPL_PRIVMSG(nick, user, target, message) (":" + nick + "!" + user + "@localhost PRIVMSG " + target + " :" + message + "\r\n");
+
+// KICK
+# define RPL_KICK(nick, user, channel, target) (":" + nick + "!" + user + "@localhost KICK #" + channel + " " + target + "\r\n");
 
 #endif
