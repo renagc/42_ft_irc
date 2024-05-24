@@ -261,7 +261,7 @@ int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *
 {
 	std::map<std::string, Channel>::iterator it;
 	it = server._channels.find(token[1]);
-	if (it1 != server._channels.end())
+	if (it != server._channels.end())
 	{
 		std::vector<Client *> operators;
 		operators = it->second.getOperators();
@@ -270,53 +270,60 @@ int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *
 		channel doesnt exist;
 	for (unsigned long j = 0; j < operators.size(); j++)
 	{
-		if (operators[i] == client)
+		if (operators[j] == client)
 		{
-			if (token[2] == +i)
+			if (token[2].compare("+i"))
 			{
-					i->second.setI(true);
+				it->second.setI(true);
 			}
-			else if (token[2] == -i)
+			else if (token[2].compare("-i"))
 			{
-						i->second.setI(false);
+				it->second.setI(false);
 			}	
-			else if (token[2] == +t)
+			else if (token[2].compare("+t"))
 			{
-				i->second.setT(true);
+				it->second.setT(true);
 			}
-			else if (token[2] == -t)
+			else if (token[2].compare("-t"))
 			{
-				i->second.setT(false);
+				it->second.setT(false);
 			}
-			else if (token[2] == +k)
+			else if (token[2].compare("+k"))
 			{
-				i->second.setK(true);
+				it->second.setK(true);
 				if (token[3])
 					setPW(token[3]);
 				else
 					setPW(0);
 			}
-			else if (token[2] == -k)
+			else if (token[2].compare("-k"))
 			{
 				if (token[3] && token[3] == it->second._pw)
 				{
-						i->second.setK(false);
-						setPW(0);
+					it->second.setK(false);
+					setPW(0);
 				}
 				else
 					wrong pass;
 			}
-			else if (token[2] == +o)
+			else if (token[2].compare("+o"))
 			{
-				std::map<std::string, Channel>::iterator it2;
-				it2 = server._channels.find(token[1]);
-				if (it2 != server._channels.end())
+				Client *client1;
+				client1 = findClient(token[3]);
+				for (unsigned long i = 0; i < operators.size(); i++)
 				{
-					if  )
+					if (operators[j] == client1)
+					{
+						already operator;
+					}
+					else
+					{
+						it->second.addoperator(client1);
 
+					}
 
-			}
-			else if (token[2] == +l)
+				}
+			else if (token[2].compare("+l"))
 			{
 				i->second.setL(true);
 				if (token[3])
@@ -325,18 +332,22 @@ int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *
 					{
 						if (!isdigit(token[3][j]))
 							not a number;
-						i->second.setLimit(atoi(token[3]))
+						it->second.setLimit(atoi(token[3]))
 					}
 				}
 				else
 					channel doesnt exist
 			}
-			else if (token[2] == -l)
+			else if (token[2].compare("-l"))
 			{
-				i->second.setL(false);
+				it->second.setL(false);
 			}
+			else
+				wrong flag;
 
 			}
+		else
+			not operator;
 		}
 
 }
