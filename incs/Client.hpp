@@ -2,6 +2,11 @@
 # define CLIENT_HPP
 
 # include <iostream>
+# include <iomanip>
+# include <vector>
+# include "Channel.hpp"
+
+class Channel;
 
 class Client
 {
@@ -10,19 +15,32 @@ class Client
 		int				_id;
 		std::string		_user;
 		std::string		_nick;
+		Channel			*_curr_channel;
+		std::string		_host;
+		bool			_logged;
 		
 	public:
 		/* Constructor*/
-		Client( int fd , int id );
+		Client( int fd , int id, const std::string &host );
 		~Client();
 
-		/* main member function */
-		void				start( void );
-
 		/* get funcs */
-		int					getId( void ) const;
-		const std::string	&getUser( void ) const;
-		const std::string	&getNick( void ) const;
+		int							getFd( void ) const;
+		int							getId( void ) const;
+		const std::string			&getUser( void ) const;
+		const std::string			&getNick( void ) const;
+		Channel						*getCurrChannel( void ) const;
+		const std::string			&getHost( void ) const;
+		const bool					&getLogged( void ) const;
+		
+		/* set funcs */
+		void						setCurrChannel( Channel *channel );
+		void						setNick( const std::string &nick );
+		void						setUser( const std::string &user );
+		void						setLogged( bool logged );
+
+		/* logs */
+		void						printPrivate( void ) const;
 };
 
 #endif
