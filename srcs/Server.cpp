@@ -9,11 +9,6 @@ Server::Server(std::string port, std::string pw) : _port(port), _next_client_id(
 	if (pw.length() < 2)
 		throw std::runtime_error("server weak password");
 
-	//set valid commands;
-	_commands.push_back("JOIN");
-	_commands.push_back("NICK");
-	_commands.push_back("USER");
-
 	struct addrinfo		hints;
 	int					status;
 
@@ -169,7 +164,7 @@ void Server::clientDisconnect( Client *client )
 
 void Server::createChannel( const std::string &name, Client *admin )
 {
-	Channel	newchannel("test", admin);
+	Channel	newchannel(name, admin);
 	newchannel.setId(_next_channel_id++);
 	_channels.insert(std::pair<std::string, Channel>(name, newchannel));
 	log("channel created", newchannel.getId());
@@ -224,7 +219,7 @@ void Server::knownConnection( int id )
 	{
 		msg.assign(buf, nbytes);
 		std::cout << msg;
-		std::vector<std::string> parse = split(msg, "\n");
+		std::vector<std::string> parse = split(msg, "\r\n");
 		std::vector<std::string>::iterator it;
 		for (it = parse.begin(); it != parse.end(); it++)
 		{
@@ -233,6 +228,7 @@ void Server::knownConnection( int id )
 				_parsing->chooseParsing(client, cmd);
 			}
 			catch(const std::string& e) {
+				// log(std::string("message sent from server: ").append(e));
 				if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
 					log("send problem");
 			}

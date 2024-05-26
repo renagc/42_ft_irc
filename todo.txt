@@ -1,0 +1,12 @@
+comandos em falta para implementar:
+INVITE
+TOPIC
+MODE
+WHO
+
+comandos para rever o parsing e features:
+NICK
+USER
+JOIN
+PRIVMSG
+KICK

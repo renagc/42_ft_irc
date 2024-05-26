@@ -10,20 +10,19 @@ Parser::Parser(Server *server) : _server(server)
 
 Parser::~Parser() {}
 
-void Parser::chooseParsing( Client *client, std::vector<std::string> cmd ) 
+void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 {
 	if (cmd.size() < 1)
 		throw "Invalid command (more parameters needed)";
-	
-	if (cmd[0].compare("NICK"))
+	if (!cmd[0].compare("NICK"))
 		return (nickCommand(client, cmd[1]));
-	else if (cmd[0].compare("USER"))
+	else if (!cmd[0].compare("USER"))
 		return (userCommand(client, cmd[1]));
-	else if (cmd[0].compare("JOIN"))
+	else if (!cmd[0].compare("JOIN"))
 		return (joinCommand(client, cmd[1]));
-	else if (cmd[0].compare("PRIVMSG"))
-		return (privmsgCommand(client, cmd[1], cmd[2]));
-	else if (cmd[0].compare("KICK"))
+	else if (!cmd[0].compare("PRIVMSG"))
+		return (privmsgCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
+	else if (!cmd[0].compare("KICK"))
 		return (kickCommand(client, cmd[1], cmd[2]));
 	// else if (cmd[0].compare("INVITE"))
 	// 	return (inviteParse(cmd));
@@ -31,15 +30,16 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 	// 	return (topicParse(cmd));
 	// else if (cmd[0].compare("MODE"))
 	// 	return (modeParse(cmd));
+	else if (!cmd[0].compare("CAP"))
+		return ;
 	else
-		throw "Invalid command";
+		throw ERR_UNKNOWNCOMMAND(client->getNick(), cmd[0]);
 }
 
 std::map<int, Client>::iterator Parser::findNick( const std::string &nick )
 {
-	std::map<int, Client>			clients = _server->getClients();
 	std::map<int, Client>::iterator it;
-	for (it = clients.begin(); it != clients.end(); it++)
+	for (it = _clients->begin(); it != _clients->end(); it++)
 	{
 		if (it->second.getNick() == nick)
 			break ;
@@ -52,7 +52,7 @@ void Parser::authenticateChecker( Client *client )
 	if (client->getNick().empty() || client->getUser().empty())
 		return ;
 	client->setLogged(true);
-	throw RPL_WELCOME(client->getNick(), client->getUser());
+	throw RPL_WELCOME(client->getNick(), client->getUser(), client->getHost());
 }
 
 // atencao ao parsing que esta a dar erro
@@ -64,15 +64,17 @@ void Parser::nickCommand( Client *client, const std::string &nickname )
 		throw ERR_NONICKNAMEGIVEN(client->getNick());
 	}
 	std::map<int, Client>::iterator it = findNick(nickname);
-	if (it != _server->getClients().end())
+	if (it != _clients->end())
 	{
 		log(std::string("error nickname in use"));
 		throw ERR_NICKNAMEINUSE(client->getNick(), nickname);
 	}
-	client->setNick(nickname);
 	log(std::string("client changed nickname to: ").append(nickname), client->getId());
+	std::string oldNick = client->getNick();
+	client->setNick(nickname);
 	if (!client->getLogged())
 		authenticateChecker(client);
+	throw RPL_NICK(oldNick, client->getUser(), client->getHost(), nickname);
 }
 
 void Parser::userCommand( Client *client, const std::string &username )
@@ -91,7 +93,6 @@ void Parser::userCommand( Client *client, const std::string &username )
 // JOIN #channel need to implement all the error messages
 void Parser::joinCommand( Client *client, const std::string &channel_name )
 {
-	DEBUG("joinCommand");
 	if (channel_name.empty() || channel_name.at(0) != '#')
 	{
 		log("no channel name given", client->getId());
@@ -110,26 +111,37 @@ void Parser::joinCommand( Client *client, const std::string &channel_name )
 	{
 		channel->add(client);
 		log("client joined channel", client->getNick(), channel->getName());
-		throw RPL_JOIN(client->getNick(), client->getUser(), channel->getName());
+		throw RPL_JOIN(client->getNick(), client->getUser(), client->getHost(), channel->getName());
 	}
 }
 
 // TODO: verificar o parsing do target
 void Parser::privmsgCommand( Client *client, const std::string &channel_name, const std::string &message )
 {
+	log(message);
 	if (channel_name.empty() || message.empty())
 	{
 		log(std::string("no channel_name or message given"));
 		throw ERR_NEEDMOREPARAMS(client->getNick(), "PRIVMSG");
 	}
-	std::map<int, Client>::iterator it = findNick(&channel_name[1]);
-	if (it != _server->getClients().end())
+	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
+	if (it != _channels->end())
 	{
-		log(std::string("error channel_name not found"));
-		throw ERR_NOSUCHNICK(client->getNick(), channel_name);
+		std::vector<Client *> clients = (*it).second.getClients();
+		std::string msg = RPL_CHANNEL(client->getNick(), client->getUser(),client->getHost(), &channel_name[1], &message[1]);
+		DEBUG(msg);
+		for (std::vector<Client *>::iterator it = clients.begin(); it != clients.end(); it++)
+		{
+			if (client != *it && send((*it)->getFd(), msg.c_str(), msg.size(), 0) == -1)
+			{
+				log(std::string("send problem"));
+			}
+		}
+		// log(std::string("error channel_name not found"));
+		// throw ERR_NOSUCHNICK(client->getNick(), channel_name);
 	}
 	log(std::string("client sent message to ").append(channel_name), client->getId());
-	throw RPL_PRIVMSG(client->getNick(), client->getUser(), channel_name, message);
+	// throw RPL_PRIVMSG(client->getNick(), client->getUser(), channel_name, message);
 }
 
 // int Parser::nickParse(std::vector<std::string> tokens) 
