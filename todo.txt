@@ -3,6 +3,7 @@ INVITE
 TOPIC
 MODE
 WHO
+PART (leave channel and update channel client list)
 
 comandos para rever o parsing e features:
 NICK
@@ -12,3 +13,5 @@ PRIVMSG
 KICK
 
 - definir numero maximo de conextions ao server
+- necessário rever os throw the strings com macros (provavelmente passar para classe)
+- implementar o BOT command para o bonus

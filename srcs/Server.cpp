@@ -225,6 +225,7 @@ void Server::knownConnection( int id )
 		{
 			std::vector<std::string> cmd = split(*it, " ");
 			try {
+				debug();
 				_parsing->chooseParsing(client, cmd);
 			}
 			catch(const std::string& e) {
@@ -232,9 +233,7 @@ void Server::knownConnection( int id )
 				if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
 					log("send problem");
 			}
-			// findCommand(client, cmd);
 		}
-		// handleDataSender(msg, client);
 	}
 }
 
@@ -274,7 +273,7 @@ int Server::getNextClientId( void )
 
 int Server::getNextChannelId( void )
 {
-	if (_clients.empty())
+	if (_channels.empty())
 		return(0);
 	return(_channels.rbegin()->second.getId() + 1);
 }
