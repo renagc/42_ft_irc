@@ -47,10 +47,6 @@ class Server
 		std::vector<std::string>			_commands;
 		Parser								*_parsing;
 
-
-		int									_next_client_id;
-		int									_next_channel_id;
-
 		/* debug */
 		void						debug( void );
 
@@ -61,41 +57,29 @@ class Server
 		/* member functions */
 
 		// steps to create a server are: create a socket, bind the socket, listen on the socket
-		void							startListen( void );
+		void									startListen( void );
 
 		// poll functions
-		void							clientConnection( void );
-		void							authenticateChecker( Client *client );
+		void									clientConnection( void );
 	
-		void							knownConnection( int id );
-		void							handleDataSender( const std::string &msg, Client *sender );
+		void									knownConnection( int id );
+		void									handleDataSender( const std::string &msg, Client *sender );
 
 		// client functions
-		Client							*findClientByFd( int fd );
-		void							clientDisconnect( Client *client );
+		Client									*findClientByFd( int fd );
+		void									clientDisconnect( Client *client );
 
 		// channel functions
-		void							createChannel( const std::string &name, Client *admin );
-		Client							*getClient( const std::string &nickname );
-
-		// command chooser
-		void							chooseCommand( Client *client, const std::vector<std::string> &cmd );
-
-		// command finder
-		void							findCommand( Client *client, const std::vector<std::string> &cmd );
-
-		// commands functions
-		void							joinCommand( Client *client, const std::string &channel_name );
-
-		// nick command
-		void									nickCommand( Client *client, const std::string &nickname );
-		std::map<int, Client>::iterator			findNick( const std::string &nick );
-
-		void									userCommand( Client *client, const std::string &username );
+		void									createChannel( const std::string &name, Client *admin );
+		Client									*getClient( const std::string &nickname );
 
 		// get clients
 		std::map<int, Client>					&getClients( void );
 		std::map<std::string, Channel>			&getChannels( void );
+
+		// get current id
+		int										getNextClientId( void );
+		int										getNextChannelId( void );
 };
 
 # include "Parser.hpp"

@@ -1,6 +1,6 @@
 #include "../incs/Server.hpp"
 
-Server::Server(std::string port, std::string pw) : _port(port), _next_client_id(0), _next_channel_id(0)
+Server::Server(std::string port, std::string pw) : _port(port)
 {
 	_parsing = new Parser(this);
 	int portv = std::atoi(port.c_str());
@@ -117,7 +117,7 @@ void Server::clientConnection( void )
 	std::map<int, Client>::iterator	it = _clients.find(temp.fd);
 	if (it != _clients.end())
 		return ;
-	Client	new_client( temp.fd, _next_client_id++, std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
+	Client	new_client( temp.fd, getNextClientId(), std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
 	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
 	log(std::string("client logging in"), new_client.getId());
 }
@@ -165,7 +165,7 @@ void Server::clientDisconnect( Client *client )
 void Server::createChannel( const std::string &name, Client *admin )
 {
 	Channel	newchannel(name, admin);
-	newchannel.setId(_next_channel_id++);
+	newchannel.setId(getNextChannelId());
 	_channels.insert(std::pair<std::string, Channel>(name, newchannel));
 	log("channel created", newchannel.getId());
 }
@@ -264,3 +264,17 @@ void Server::debug( void )
 
 std::map<int, Client> &Server::getClients( void ) { return(_clients); }
 std::map<std::string, Channel> &Server::getChannels( void ) { return(_channels); }
+
+int Server::getNextClientId( void )
+{
+	if (_clients.empty())
+		return(0);
+	return(_clients.rbegin()->second.getId() + 1);
+}
+
+int Server::getNextChannelId( void )
+{
+	if (_clients.empty())
+		return(0);
+	return(_channels.rbegin()->second.getId() + 1);
+}

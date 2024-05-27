@@ -10,3 +10,5 @@ USER
 JOIN
 PRIVMSG
 KICK
+
+- definir numero maximo de conextions ao server
