@@ -314,9 +314,9 @@ void Parser::kickCommand( Client *client, const std::string &channel_name, const
 // int Parser::TopicParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server) 
 // {
 // 	std::map<std::string, Channel>::iterator it;
-// 	it = server._channels.find(token[1]);
+// 	it = _channels.find(token[1]);
 // 	int	able = 1;
-// 	if (it != server._channels.end())
+// 	if (it != _channels.end())
 // 	{
 // 		if (it->second.getT() == true)
 // 		{
@@ -331,16 +331,17 @@ void Parser::kickCommand( Client *client, const std::string &channel_name, const
 // 		}
 // 		if (able == 1 && !token[2])
 // 		{
-// 			msg_Topic
+// 			RPL_NOTOPIC 
 // 		}
 // 		if (able == 1 && token[2])
 // 		{
 // 			setTopic(token[2]);
+//			RPL_TOPIC
 // 		}
 
 // 	}
 // 	else
-// 		channel doesnt exist
+// 		ERR_NOTONCHANNEL
 
 
 // }
