@@ -236,7 +236,7 @@ void Parser::kickCommand( Client *client, const std::string &channel_name, const
 	// it = _server->_channels.find(token[1]);
 	// if (it != server._channels.end())
 	// {
-	// 	std::vector<Client *> channel_clients;
+	// 	std::map<int, Client> channel_clients;
 		
 	// 	channel_clients = it->second.getClients();
 	// 	for (unsigned long i = 0; i < channel_clients.size(); i++)
@@ -261,47 +261,47 @@ void Parser::kickCommand( Client *client, const std::string &channel_name, const
 
 // int Parser::InviteParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server)
 // {
-// 	Client	*invited;
-// 	invited = server.getClient(token[1]);
 // 	int	able = 1;
 // 	if (invited != 0)
 // 	{
 // 		std::map<std::string, Channel>::iterator it;
 // 		it = server._channels.find(token[2]);
-// 		if (it != server._channels.end())
+//		if (_server->getClient(token[1]) == NULL)
+//			throw ERR_NOSUCHNICK(client->getNick(), client->getUser(), channel_name, username);
+// 		if (it ==_channels.end())
+// 			throw ERR_NOSUCHNICK(client->getNick(), client->getUser(), channel_name, username);
+// 		std::vector<Client *> channel_nicknames;
+// 		channel_nicknames = it->second.getNicknames();
+// 		for (unsigned long i = 0; i < channel_nicknames.size(); i++)
 // 		{
-// 			std::vector<Client *> channel_clients;
-		
-// 			channel_clients = it->second.getClients();
-// 			for (unsigned long i = 0; i < channel_clients.size(); i++)
+// 			if (channel_nicknames[i] == token[1])
 // 			{
-// 				if (channel_clients[i] == invited)
-// 				{
-// 					already in the channel;
-// 				}
-// 			}
-// 			if (it->second.getT() == true)
-// 			{
-// 				able = 0;
-// 				std::vector<Client *> operators;
-// 				operators = it->second.getOperators();
-// 				for (unsigned long j = 0; j < operators.size(); j++)
-// 				{
-// 					if (operators[i] == client)
-// 					able = 1;
-// 				}
-// 			}
-// 			if (it->second.getLimit() < it->second._clients.size() && able == 1)
-// 			{
-// 				it->second.addClient(invited);
-// 			}
-// 			else
-// 			{
-// 				channel full or not operator;
-// 			}
+// 				throw ERR_USERONCHANNEL(client->getNick(), client->getUser(), channel_name, username);
 // 			}
 // 		}
+// 		if (it->second.getT() == true)
+// 		{
+// 			able = 0;
+// 			std::vector<Client *> operators;
+// 			operators = it->second.getOperators();
+// 			for (unsigned long j = 0; j < operators.size(); j++)
+// 			{
+// 				if (operators[i] == client)
+// 				able = 1;
+// 			}
+// 		}
+// 		if (it->second.getLimit() < it->second._clients.size() && able == 1)
+// 		{
+// 			it->second.addClient(_server->getClient(token[1]));
+//			throw RPL_INVITING (client->getNick(), client->getUser(), channel_name, username);
+// 		}
+// 		else
+// 		{
+// 			channel full or not operator;
+// 		}
 // 	}
+// }
+//
 
 // 	else
 // 		user doesnt exist
