@@ -44,6 +44,7 @@ class Channel
 		const bool						&getT( void ) const;
 		const bool						&getK( void ) const;
 		const bool						&getL( void ) const;
+		const bool						isOperator(Client *client);
 
 		/* set funcs */
 		void							setId( int id );

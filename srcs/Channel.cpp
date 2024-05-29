@@ -99,6 +99,19 @@ void Channel::removeOperator( Client *client )
 	_operators.erase(it);
 }
 
+const bool	Channel::isOperator(Client *client)
+{
+	std::vector<Client *> operators;
+	operators = this->getOperators();
+	for (int i = 0; i < operators.size(); i++)
+	{
+		if (operators[i] == client)
+			return (true);
+	}
+	return (false);
+
+}
+
 const bool &Channel::getI( void ) const { return(_i); }
 const bool &Channel::getT( void ) const { return(_t); }
 const bool &Channel::getK( void ) const { return(_k); }
