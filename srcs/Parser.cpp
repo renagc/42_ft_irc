@@ -339,7 +339,7 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 					for (int j = 3; j < cmd.size(); j++)
 					{
 						topic.append(cmd[j]);
-						it->second.setTopic(topic);
+						it->second.setTopic(topic); // criar funcao setTopic
 					}
 					RPL_TOPIC;
 
@@ -348,30 +348,8 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 			}
 			else // nao e operador e _t = true
 				ERR_CHANOPRIVSNEEDED;
-
- 		if (it->second.getT() == true)
- 		{
- 			able = 0;
- 			std::vector<Client *> operators;
- 			operators = it->second.getOperators();
- 			for (unsigned long j = 0; j < operators.size(); j++)
- 			{
- 				if (operators[i] == client)
- 					able = 1;
- 			}
- 		}
- 		if (able == 1 && !token[2])
- 		{
- 			RPL_NOTOPIC
- 		}
- 		if (able == 1 && token[2])
- 		{
- 			setTopic(token[2]);
-			RPL_TOPIC
- 		
- 	}
- 	else
- 		ERR_NOTONCHANNEL
+		}
+	}
 }
 // int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server)
 // {
