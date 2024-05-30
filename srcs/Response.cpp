@@ -53,6 +53,9 @@ void Response::ERR_NONICKNAMEGIVEN( Client *client ) { numericReply(client, "431
 void Response::ERR_ERRONEUSNICKNAME( Client *client, const std::string &nickname ) { numericReply(client, "432", strtov(1, nickname.c_str()),"Erroneous nickname"); }
 void Response::ERR_NICKNAMEINUSE( Client *client, const std::string &nickname ) { numericReply(client, "433", strtov(1, nickname.c_str()), "Nickname is already in use"); }
 void Response::RPL_NICK( Client *client, const std::map<int, Client> &clients, const std::string &oldNick ) { broadcastAll(clients, ":" + oldNick + "!" + client->getUser() + "@" + client->getHost() + " NICK :" + client->getNick() + "\r\n"); }
+void Response::ERR_ALREADYREGISTERED( Client *client ) { numericReply(client, "462", std::vector<std::string>(), "You may not reregister"); }
+void Response::ERR_NEEDMOREPARAMS( Client *client, const std::string &command ) { numericReply(client, "461", strtov(1, command.c_str()), "Not enough parameters"); }
+void Response::RPL_WELCOME( Client *client ) { numericReply(client, "001", std::vector<std::string>(), "Welcome to the Internet Relay Network " + client->getNick() + "!" + client->getUser() + "@" + client->getHost()); }
 
 // CHANNEL
 void Response::ERR_NOSUCHCHANNEL( Client *client, const std::string &channel ) { numericReply(client, "403", strtov(1, channel.c_str()), "No such channel"); }

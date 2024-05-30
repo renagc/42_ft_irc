@@ -15,7 +15,9 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 	if (!cmd[0].compare("NICK"))
 		return (nickCommand(client, cmd[1]));
 	else if (!cmd[0].compare("USER"))
-		return (userCommand(client, cmd[1]));
+		return (userCommand(client, cmd));
+	else if (!cmd[0].compare("CAP"))
+		return ;
 	else if ( client->getLogged() )
 	{
 		if (!cmd[0].compare("JOIN"))
@@ -36,8 +38,6 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 		// 	return (topicCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
 		// else if (!cmd[0].compare("MODE"))
 		// 	return (modeCommand(client, cmd));
-		else if (!cmd[0].compare("CAP"))
-			return ;
 	}
 	else
 		throw ERR_UNKNOWNCOMMAND(client->getNick(), cmd[0]);
@@ -59,7 +59,7 @@ void Parser::authenticateChecker( Client *client )
 	if (client->getNick().empty() || client->getUser().empty())
 		return ;
 	client->setLogged(true);
-	throw RPL_WELCOME(client->getNick(), client->getUser(), client->getHost());
+	return Response::RPL_WELCOME(client);
 }
 
 // atencao ao parsing que esta a dar erro
@@ -88,17 +88,39 @@ void Parser::nickCommand( Client *client, const std::string &nickname )
 	authenticateChecker(client);
 }
 
-void Parser::userCommand( Client *client, const std::string &username )
+void Parser::userCommand( Client *client, const std::vector<std::string> &cmd )
 {
-	if (username.empty())
+	if (client->getRegistered())
+		return Response::ERR_ALREADYREGISTERED(client);
+	
+	if (cmd.size() < 5)
+		return Response::ERR_NEEDMOREPARAMS(client, "USER");
+
+	// verify if nickname is valid
+	for (unsigned long i = 0; i < cmd[1].size(); i++)
 	{
-		log(std::string("no username or realname given"));
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "USER");
+		if ((!std::isalnum(cmd[1][i]) && cmd[1][i] != '_' && cmd[1][i] != '-') || cmd[1].size() > 10)
+			return Response::ERR_NEEDMOREPARAMS(client, "USER");
 	}
-	client->setUser(username);
-	log(std::string("client changed username to: ").append(username), client->getId());
+
+	if (cmd[2].compare("0") || cmd[3].compare("*") || (cmd[4][0] != ':' && cmd[4].size() < 2))
+		return Response::ERR_NEEDMOREPARAMS(client, "USER");
+
+	std::vector<std::string> realName;
+	for (unsigned long i = 4; i < cmd.size(); i++)
+	{
+		if (i == 4)
+			realName.push_back(&cmd[i][1]);
+		else
+			realName.push_back(cmd[i]);
+	}
+
+	client->setRealName(joinString(realName, realName.begin()));
+	client->setUser(cmd[1]);
 	if (!client->getLogged())
 		authenticateChecker(client);
+	client->setRegistered(true);
+	log(std::string("set user to: ").append(cmd[1]), client->getId());
 }
 
 // JOIN #channel need to implement all the error messages
@@ -107,7 +129,7 @@ void Parser::joinCommand( Client *client, const std::string &channel_name )
 	if (channel_name.empty() || channel_name.at(0) != '#')
 	{
 		log("no channel name given", client->getId());
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "JOIN");
+		return Response::ERR_NEEDMOREPARAMS(client, "JOIN");
 	}
 	Channel	*channel = NULL;
 	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
@@ -131,7 +153,7 @@ void Parser::privmsgCommand( Client *client, const std::string &channel_name, co
 	if (channel_name.empty() || message.empty())
 	{
 		log(std::string("no channel_name or message given"));
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "PRIVMSG");
+		return Response::ERR_NEEDMOREPARAMS(client, "PRIVMSG");
 	}
 	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
 	if (it != _channels->end())
