@@ -104,8 +104,13 @@ const bool &Channel::getT( void ) const { return(_t); }
 const bool &Channel::getK( void ) const { return(_k); }
 const bool &Channel::getL( void ) const { return(_l); }
 const std::string &Channel::getTopic( void ) const { return(_topic); }
+const int &Channel::getLimit( void ) const { return(_limit); }
+const std::string &Channel::getPw( void ) const { return(_pw); }
 
 void Channel::setT( const bool &i ) { _i = i; }
 void Channel::setI( const bool &t ) { _t = t; }
 void Channel::setK( const bool &k ) { _k = k; }
 void Channel::setL( const bool &l ) { _l = l; }
+void Channel::setTopic( const std::string &topic ) { _topic = topic; }
+void Channel::setLimit( int limit ) { _limit = limit; }
+void Channel::setPw( const std::string &pw ) { _pw = pw; }

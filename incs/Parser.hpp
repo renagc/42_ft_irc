@@ -1,30 +1,57 @@
-#include <iostream>
-#include <cctype>
-#include <cstdlib>
-#include <exception>
+#ifndef PARSER_HPP
+# define PARSER_HPP
+
+# include <iostream>
+# include <cctype>
+# include <cstdlib>
+# include <exception>
+# include <map>
+# include <utility>
+
+// irc libs
+# include "Response.hpp"
+# include "Server.hpp"
 
 class Parser
 {
 	private:
-		// int			_port;
-		// std::string _password;
-
-		Parser();
-		static bool alldigits( void );
+		Server								*_server;
+		std::map<int, Client>				*_clients;
+		std::map<std::string, Channel>		*_channels;
 
 	public:
-		virtual				~Parser();
-		static int			port( char *p );
-		static std::string	password( char *pw );
+		// Parser( void );
+		Parser( Server *server );
+		~Parser();
 
-		class ParserPortException : public std::exception
-		{
-			public:
-				virtual const char *what() const throw() { return ("Error on port"); }
-		};
-		class ArgumentsException : public std::exception
-		{
-			public:
-				virtual const char *what() const throw() { return ("Wrong number of arguments.\n\nUsage: ./ircserv <port> <password>"); }
-		};
+		void								chooseParsing( Client *client, std::vector<std::string> cmd );
+		std::map<int, Client>::iterator		findNick( const std::string &nick );
+		void								authenticateChecker( Client *client );
+
+		// commands functions
+		void								nickCommand( Client *client, const std::string &nickname );
+
+		// user command
+		void								userCommand( Client *client, const std::string &username );
+
+		// join command
+		void								joinCommand( Client *client, const std::string &channel_name );
+
+		// privmsg command
+		void								privmsgCommand( Client *client, const std::string &channel_name, const std::string &message );
+
+		// kick command
+		void								kickCommand( Client *client, const std::string &channel_name, const std::string &username );
+
+		// part command
+		void								partCommand( Client *client, const std::string &channel_name );
+
+		// topic command
+		void								topicCommand( Client *client, const std::string &channel_name, const std::string &topic );
+		void								modeCommand( Client *client, const std::vector<std::string> &cmd );
+		void								whoCommand( Client *client, const std::string &mask, const std::string &o );
+
+		
 };
+
+#endif // PARSER_HPP

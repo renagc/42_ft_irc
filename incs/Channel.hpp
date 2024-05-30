@@ -39,11 +39,13 @@ class Channel
 		std::vector<std::string>		getNicknames( void ) const;
 		std::vector<Client *>			getClients( void ) const;
 		std::vector<Client *>			getOperators( void ) const;
-		const std::string				&getTopic( void ) const;
 		const bool						&getI( void ) const;
 		const bool						&getT( void ) const;
 		const bool						&getK( void ) const;
 		const bool						&getL( void ) const;
+		const std::string				&getTopic( void ) const;
+		const int						&getLimit( void ) const;
+		const std::string				&getPw( void ) const;
 
 		/* set funcs */
 		void							setId( int id );
@@ -51,6 +53,9 @@ class Channel
 		void							setI( const bool &t );
 		void							setK( const bool &k );
 		void							setL( const bool &l );
+		void							setTopic( const std::string &topic );
+		void							setLimit( int limit );
+		void							setPw( const std::string &pw );
 		void							addOperator( Client *client );
 		void							removeOperator( Client *client );
 

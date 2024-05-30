@@ -61,3 +61,26 @@ void log( const std::string &str, const std::string &from, const std::string &to
 	printLocalTime();
 	std::cout << " | " << "server: " << str << " from: " << from << ", to: " << to <<std::endl;
 }
+
+std::string joinString( const std::vector<std::string> &vec, std::vector<std::string>::const_iterator pos )
+{
+	std::string									joined;
+	for (; pos != vec.end(); pos++)
+	{
+		joined.append(*pos);
+		if (pos + 1 != vec.end())
+			joined.append(" ");
+	}
+	return (joined);
+}
+
+std::vector<std::string> strtov(int number, ...)
+{
+	std::vector<std::string> vec;
+	va_list ap;
+	va_start(ap, number);
+	for (int i = 0; i < number; i++)
+		vec.push_back(va_arg(ap, const char *));
+	va_end(ap);
+	return (vec);
+}

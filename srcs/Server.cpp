@@ -1,17 +1,13 @@
 #include "../incs/Server.hpp"
 
-Server::Server(std::string port, std::string pw) : _port(port), _next_client_id(0), _next_channel_id(0)
+Server::Server(std::string port, std::string pw) : _port(port)
 {
+	_parsing = new Parser(this);
 	int portv = std::atoi(port.c_str());
 	if (portv <= PORT_MIN_VALUE || portv >= PORT_MAX_VALUE)
 		throw std::runtime_error("server port error");
 	if (pw.length() < 2)
 		throw std::runtime_error("server weak password");
-
-	//set valid commands;
-	_commands.push_back("JOIN");
-	_commands.push_back("NICK");
-	_commands.push_back("USER");
 
 	struct addrinfo		hints;
 	int					status;
@@ -121,7 +117,7 @@ void Server::clientConnection( void )
 	std::map<int, Client>::iterator	it = _clients.find(temp.fd);
 	if (it != _clients.end())
 		return ;
-	Client	new_client( temp.fd, _next_client_id++, std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
+	Client	new_client( temp.fd, getNextClientId(), std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
 	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
 	log(std::string("client logging in"), new_client.getId());
 }
@@ -168,48 +164,40 @@ void Server::clientDisconnect( Client *client )
 
 void Server::createChannel( const std::string &name, Client *admin )
 {
-	Channel	newchannel("test", admin);
-	newchannel.setId(_next_channel_id++);
+	Channel	newchannel(name, admin);
+	newchannel.setId(getNextChannelId());
 	_channels.insert(std::pair<std::string, Channel>(name, newchannel));
 	log("channel created", newchannel.getId());
 }
 
 
-void Server::handleDataSender( const std::string &msg, Client *sender )
-{
-	// We got some good data from a client
-	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
-	{
-		if (!it->second.findClient(sender))
-			continue ;
-		for(unsigned long j = 1; j < _pfds.size(); j++)
-		{
-			// Send to everyone!
-			int dest_fd = _pfds[j].fd;
-			Client *client = &_clients.find(dest_fd)->second;
+// void Server::handleDataSender( const std::string &msg, Client *sender )
+// {
+// 	// We got some good data from a client
+// 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+// 	{
+// 		if (!it->second.findClient(sender))
+// 			continue ;
+// 		for(unsigned long j = 1; j < _pfds.size(); j++)
+// 		{
+// 			// Send to everyone!
+// 			int dest_fd = _pfds[j].fd;
+// 			Client *client = &_clients.find(dest_fd)->second;
 
-			// Except the listener and ourselves
-			if (	dest_fd != _sockfd && \
-					dest_fd != sender->getFd() && \
-					it->second.findClient(client))
-			{
-				if (send(dest_fd, msg.c_str(), msg.size(), 0) == -1)
-					perror("send");
-				else
-					log("data sent", sender->getNick(), client->getNick());
-			}
-		}
-		debug();
-	}
-}
-
-void Server::authenticateChecker( Client *client )
-{
-	if (client->getNick().empty() || client->getUser().empty())
-		return ;
-	client->setLogged(true);
-	throw RPL_WELCOME(client->getNick(), client->getUser());
-}
+// 			// Except the listener and ourselves
+// 			if (	dest_fd != _sockfd && \
+// 					dest_fd != sender->getFd() && \
+// 					it->second.findClient(client))
+// 			{
+// 				if (send(dest_fd, msg.c_str(), msg.size(), 0) == -1)
+// 					perror("send");
+// 				else
+// 					log("data sent", sender->getNick(), client->getNick());
+// 			}
+// 		}
+// 		debug();
+// 	}
+// }
 
 void Server::knownConnection( int id )
 {
@@ -231,50 +219,24 @@ void Server::knownConnection( int id )
 	{
 		msg.assign(buf, nbytes);
 		std::cout << msg;
-		std::vector<std::string> parse = split(msg, "\n");
+		std::vector<std::string> parse = split(msg, "\r\n");
 		std::vector<std::string>::iterator it;
 		for (it = parse.begin(); it != parse.end(); it++)
 		{
 			std::vector<std::string> cmd = split(*it, " ");
-			findCommand(client, cmd);
+			try {
+				_parsing->chooseParsing(client, cmd);
+			}
+			catch(const std::string& e) {
+				// log(std::string("message sent from server: ").append(e));
+				if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
+					log("send problem");
+			}
 		}
-		handleDataSender(msg, client);
 	}
-}
-
-// command chooser
-void Server::chooseCommand( Client *client, const std::vector<std::string> &cmd )
-{
-	try
-	{
-		if (!cmd[0].compare("NICK"))
-			nickCommand(client, cmd[1]);
-		else if (!cmd[0].compare("USER"))
-			userCommand(client, cmd[1]);
-		else if (!cmd[0].compare("JOIN"))
-			joinCommand(client, cmd[1]);
-	}
-	catch(const std::string& e)
-	{
-		if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
-			log("send problem");
-	}
-}
-
-void Server::findCommand( Client *client, const std::vector<std::string> &cmd )
-{
-	std::vector<std::string>::iterator it = _commands.begin();
-	for (; it != _commands.end(); it++)
-	{
-		if (!cmd[0].compare(*it))
-			break ;
-	}
-	if (it != _commands.end())
-		chooseCommand(client, cmd);
 }
 
 // commands functions
-
 Client *Server::getClient( const std::string &nickname )
 {
 	std::map<int, Client>::iterator it;
@@ -288,77 +250,6 @@ Client *Server::getClient( const std::string &nickname )
 	return (&it->second);
 }
 
-// JOIN #channel need to implement all the error messages
-void Server::joinCommand( Client *client, const std::string &channel_name )
-{
-	DEBUG("joinCommand");
-	if (channel_name.empty() || channel_name.at(0) != '#')
-	{
-		log("no channel name given", client->getId());
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "JOIN");
-	}
-	Channel	*channel = NULL;
-	std::map<std::string, Channel>::iterator it = _channels.find(&channel_name[1]);
-	if (it != _channels.end())
-		channel = &it->second;
-	if (!channel)
-	{
-		createChannel(&channel_name[1], client);
-		channel = &_channels.find(&channel_name[1])->second;
-	}
-	if (client->getLogged())
-	{
-		channel->add(client);
-		log("client joined channel", client->getNick(), channel->getName());
-		throw RPL_JOIN(client->getNick(), client->getUser(), channel->getName());
-	}
-}
-
-std::map<int, Client>::iterator Server::findNick( const std::string &nick )
-{
-	std::map<int, Client>::iterator it;
-	for (it = _clients.begin(); it != _clients.end(); it++)
-	{
-		if (it->second.getNick() == nick)
-			break ;
-	}
-	return (it);
-}
-
-// atencao ao parsing que esta a dar erro
-void Server::nickCommand( Client *client, const std::string &nickname )
-{
-	
-	if (nickname.empty())
-	{
-		log(std::string("no nickname given"));
-		throw ERR_NONICKNAMEGIVEN(client->getNick());
-	}
-	std::map<int, Client>::iterator it = findNick(nickname);
-	if (it != _clients.end())
-	{
-		log(std::string("error nickname in use"));
-		throw ERR_NICKNAMEINUSE(client->getNick(), nickname);
-	}
-	client->setNick(nickname);
-	log(std::string("client changed nickname to: ").append(nickname), client->getId());
-	if (!client->getLogged())
-		authenticateChecker(client);
-}
-
-void Server::userCommand( Client *client, const std::string &username )
-{
-	if (username.empty())
-	{
-		log(std::string("no username or realname given"));
-		throw ERR_NEEDMOREPARAMS(client->getNick(), "USER");
-	}
-	client->setUser(username);
-	log(std::string("client changed username to: ").append(username), client->getId());
-	if (!client->getLogged())
-		authenticateChecker(client);
-}
-
 void Server::debug( void )
 {
 	log("debugging users:");
@@ -367,4 +258,21 @@ void Server::debug( void )
 
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		it->second.printPrivate();
+}
+
+std::map<int, Client> &Server::getClients( void ) { return(_clients); }
+std::map<std::string, Channel> &Server::getChannels( void ) { return(_channels); }
+
+int Server::getNextClientId( void )
+{
+	if (_clients.empty())
+		return(0);
+	return(_clients.rbegin()->second.getId() + 1);
+}
+
+int Server::getNextChannelId( void )
+{
+	if (_channels.empty())
+		return(0);
+	return(_channels.rbegin()->second.getId() + 1);
 }
