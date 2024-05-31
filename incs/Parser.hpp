@@ -44,7 +44,7 @@ class Parser
 		void								kickCommand( Client *client, const std::string &channel_name, const std::string &username );
 
 		// part command
-		void								partCommand( Client *client, const std::string &channel_name );
+		void								partCommand( Client *client, const std::vector<std::string> &cmd );
 
 		// topic command
 		void								topicCommand( Client *client, const std::string &channel_name, const std::string &topic );

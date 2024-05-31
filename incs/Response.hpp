@@ -34,9 +34,6 @@
 // CHANNEL MESSAGE
 # define RPL_CHANNEL(nick, user, host, channel, message) (":" + USER(nick, user, host) + " PRIVMSG #" + channel + " :" + message + "\r\n");
 
-// PART
-# define RPL_PART(nick, user, host, channel, message) (":" + USER(nick, user, host) + " PART #" + channel + " :" + message + "\r\n");
-
 // TOPIC
 # define RPL_TOPIC(nick, user, host, channel, topic) (":" + USER(nick, user, host) + " TOPIC #" + channel + " :" + topic + "\r\n");
 
@@ -68,6 +65,10 @@ class Response
 
 		// CHANNEL numeric codes
 		static void ERR_NOSUCHCHANNEL( Client *client, const std::string &channel );
+		static void ERR_NOTONCHANNEL( Client *client, const std::string &channel );
+
+		// PART numeric codes
+		static void RPL_PART( Client *client, Channel *channel, const std::string &message );
 };
 
 #endif
