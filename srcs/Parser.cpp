@@ -26,8 +26,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 			return (privmsgCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
 		// else if (!cmd[0].compare("KICK"))
 		// 	return (kickCommand(client, cmd[1], cmd[2]));
-		// else if (!cmd[0].compare("PART"))
-		// 	return (partCommand(client, cmd[1]));
+		else if (!cmd[0].compare("PART"))
+			return (partCommand(client, cmd));
 		// else if (!cmd[0].compare("WHO"))
 		// 	return (whoCommand(client, cmd[1], cmd[2]));
 		// else if (!cmd[0].compare("QUIT"))
@@ -167,23 +167,52 @@ void Parser::privmsgCommand( Client *client, const std::string &channel_name, co
 		}
 	}
 	log(std::string("client sent message to ").append(channel_name), client->getId());
-	// throw RPL_PRIVMSG(client->getNick(), client->getUser(), channel_name, message);
 }
 
-// void Parser::partCommand( Client *client, const std::string &channel_name )
-// {
-// 	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
-// 	if (it != _channels->end())
-// 	{
-// 		(*it).second.removeClient(client);
-// 		(*it).second.removeOperator(client);
-// 		// erase all clients?
-// 		if ((*it).second.getClients().empty())
-// 			_channels->erase(it);
-// 		throw RPL_PART(client->getNick(), client->getUser(), client->getHost(), &channel_name[1], "parting channel");
-// 	}
-// 	throw ERR_NOSUCHCHANNEL(client->getNick(), &channel_name[1]);
-// }
+void Parser::partCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	std::string partMessage = "default part message";
+	if (cmd.size() < 2)
+		return Response::ERR_NEEDMOREPARAMS(client, "PART");
+	if (cmd.size() >= 3 && cmd[2].at(0) == ':')
+	{
+		partMessage = joinString(cmd, cmd.begin() + 2);
+		partMessage = &partMessage[1];
+	}
+	if (cmd[1].find(',') != std::string::npos)
+	{
+		std::vector<std::string> channels = split(cmd[1], ",");
+		for (unsigned long i = 0; i < channels.size(); i++)
+		{
+			std::map<std::string, Channel>::iterator it = _channels->find(&channels[i][1]);
+			if (it == _channels->end())
+				Response::ERR_NOSUCHCHANNEL(client, &channels[i][1]);
+			if (!(*it).second.findClient(client))
+				return Response::ERR_NOTONCHANNEL(client, channels[i]);
+			(*it).second.removeClient(client);
+			(*it).second.removeOperator(client);
+			Response::RPL_PART(client, &(*it).second, partMessage);
+			if (!(*it).second.getClients().size() && !(*it).second.getOperators().size())
+				_channels->erase(it);
+		}
+		return ;
+	}
+	if (cmd[1].at(0) != '#')
+		return Response::ERR_NEEDMOREPARAMS(client, cmd[1]);
+	else
+	{
+		std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
+		if (it == _channels->end())
+			return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+		if (!(*it).second.findClient(client))
+			return Response::ERR_NOTONCHANNEL(client, (*it).second.getName());
+		(*it).second.removeClient(client);
+		(*it).second.removeOperator(client);
+		Response::RPL_PART(client, &(*it).second, partMessage);
+		if (!(*it).second.getClients().size() && !(*it).second.getOperators().size())
+			_channels->erase(it);
+	}
+}
 
 // TODO: adicionar parsing do comentario como argumento ou nao e verificar o mode do channel
 // void Parser::kickCommand( Client *client, const std::string &channel_name, const std::string &username ) 

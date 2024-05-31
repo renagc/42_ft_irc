@@ -96,7 +96,8 @@ void Channel::removeOperator( Client *client )
 		if (client == *it)
 			break;
 	}
-	_operators.erase(it);
+	if (it != _operators.end())
+		_operators.erase(it);
 }
 
 const bool &Channel::getI( void ) const { return(_i); }
