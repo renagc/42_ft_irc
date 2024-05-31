@@ -13,14 +13,10 @@
 # include "Server.hpp"
 
 # define USER(nick, user, host) (nick + "!~" + user + "@" + host)
-# define RPL_WELCOME(nick, user, host) (":localhost 001 " + nick + " :Welcome to the ft_irc " + USER(nick, user, host) + "\r\n")
 
 // PING
 # define RPL_PONG(nick, user, token) (":" + nick + "!" + user + "@localhost PONG " + token + "\r\n")
 # define RPL_NOTICE(nick, user, target, message) (":" + nick + "!" + user + "@localhost NOTICE " + target + " " + message + "\r\n")
-
-// USER
-# define ERR_NEEDMOREPARAMS(nick, command) (":localhost 461 " + nick + " " + command + " :Not enough parameters" + "\r\n");
 
 // JOIN
 # define RPL_JOIN(nick, user, host, channel) (":" + USER(nick, user, host) + " JOIN #" + channel + "\r\n");
@@ -60,11 +56,15 @@ class Response
 		static void message( Client *client, const std::string &response );
 		static void numericReply( Client *client, const std::string &code, const std::vector<std::string> &args, const std::string &response );
 
+		static void RPL_WELCOME( Client *client );
+		static void ERR_NEEDMOREPARAMS( Client *client, const std::string &command );
+
 		// NICK numeric codes
 		static void ERR_NONICKNAMEGIVEN( Client *client );
 		static void ERR_ERRONEUSNICKNAME( Client *client, const std::string &nickname );
 		static void ERR_NICKNAMEINUSE( Client *client, const std::string &nickname );
 		static void RPL_NICK( Client *client, const std::map<int, Client> &clients, const std::string &nickname );
+		static void ERR_ALREADYREGISTERED( Client *client );
 
 		// CHANNEL numeric codes
 		static void ERR_NOSUCHCHANNEL( Client *client, const std::string &channel );

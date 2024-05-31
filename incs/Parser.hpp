@@ -32,7 +32,7 @@ class Parser
 		void								nickCommand( Client *client, const std::string &nickname );
 
 		// user command
-		void								userCommand( Client *client, const std::string &username );
+		void								userCommand( Client *client, const std::vector<std::string> &cmd );
 
 		// join command
 		void								joinCommand( Client *client, const std::string &channel_name );

@@ -7,7 +7,7 @@ PART (leave channel and update channel client list) -- renato
 QUIT -- rafa
 
 comandos para rever o parsing e features:
-USER - renato
+USER - renato -- DONE
 JOIN - renato
 KICK -- seco
 PASS -- rafa
