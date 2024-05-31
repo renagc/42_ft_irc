@@ -259,7 +259,7 @@ void Parser::kickCommand(Client *client, const std::vector<std::string> cmd)
 	// 	channel_clients = it->second.getClients();
 	// 	for (unsigned long i = 0; i < channel_clients.size(); i++)
 	// 	{
-	// 		if (channel_clients[i] == token[2])
+	// 		if (channel_clients[i] == cmd[2])
 	// 		{
 	// 			std::vector<Client *> operators;
 	// 			operators = it->second.getOperators();
@@ -338,6 +338,7 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 					std::string topic = cmd[2];
 					for (int j = 3; j < cmd.size(); j++)
 					{
+						topic.append(" ");
 						topic.append(cmd[j]);
 						it->second.setTopic(topic); // criar funcao setTopic
 					}
@@ -351,98 +352,101 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 		}
 	}
 }
-// int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server)
-// {
-// 	std::map<std::string, Channel>::iterator it;
-// 	it = server._channels.find(token[1]);
-// 	if (it != server._channels.end())
-// 	{
-// 		std::vector<Client *> operators;
-// 		operators = it->second.getOperators();
-// 	}
-// 	else
-// 		channel doesnt exist;
-// 	for (unsigned long j = 0; j < operators.size(); j++)
-// 	{
-// 		if (operators[j] == client)
-// 		{
-// 			if (token[2].compare("+i"))
-// 			{
-// 				it->second.setI(true);
-// 			}
-// 			else if (token[2].compare("-i"))
-// 			{
-// 				it->second.setI(false);
-// 			}
-// 			else if (token[2].compare("+t"))
-// 			{
-// 				it->second.setT(true);
-// 			}
-// 			else if (token[2].compare("-t"))
-// 			{
-// 				it->second.setT(false);
-// 			}
-// 			else if (token[2].compare("+k"))
-// 			{
-// 				it->second.setK(true);
-// 				if (token[3])
-// 					setPW(token[3]);
-// 				else
-// 					setPW(0);
-// 			}
-// 			else if (token[2].compare("-k"))
-// 			{
-// 				if (token[3] && token[3] == it->second._pw)
-// 				{
-// 					it->second.setK(false);
-// 					setPW(0);
-// 				}
-// 				else
-// 					wrong pass;
-// 			}
-// 			else if (token[2].compare("+o"))
-// 			{
-// 				Client *client1;
-// 				client1 = findClient(token[3]);
-// 				for (unsigned long i = 0; i < operators.size(); i++)
-// 				{
-// 					if (operators[j] == client1)
-// 					{
-// 						already operator;
-// 					}
-// 					else
-// 					{
-// 						it->second.addoperator(client1);
+ int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server)
+ {
+	if (cmd[1].empty()) // parametros insuficientes
+		ERR_NEEDMOREPARAMS;
+	if (cmd[1][0] != '#') // sem #
+		ERR_NOSUCHCHANNEL;
+	if (cmd[2])
+		ERR_UMODEUNKNOWNFLAG;
+	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
+	if (it == _channels->end()) // channel nao existe
+		ERR_NOSUCHCHANNEL;
+	std::vector<Client *> clientsOnChannel = it->second.getClients();
+	std::vector<Client *> operatorsOnChannel = it->second.getOperators();
+	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
+	{
+		if (clientsOnChannel[i] ==  client)
+		{
+			if (!it->second.isOperator(client)) // nao e operador
+				ERR_CHANOPRIVSNEEDED;
+			else
+			{
+				if (cmd[2].compare("+i"))
+				{
+					it->second.setI(true);
+				}
+				else if (cmd[2].compare("-i"))
+				{
+					it->second.setI(false);
+				}
+				else if (cmd[2].compare("+t"))
+				{
+					it->second.setT(true);
+				}
+				else if (cmd[2].compare("-t"))
+				{
+					it->second.setT(false);
+				}
+				else if (cmd[2].compare("+k"))
+				{
+					it->second.setK(true);
+					if (cmd[3])
+						setPW(cmd[3]);
+					else
+						setPW(NULL);
+				}
+				else if (!cmd[2].compare("-k"))
+				{
+					if (cmd[3] && !cmd[3].compare(it->second._pw))
+					{
+						it->second.setK(false);
+						setPW(NULL);
+					}
+					else
+						ERR_KEYSET;
+				}
+				else if (!cmd[2].compare("+o"))
+				{
+					Client *client1;
+					client1 = findClient(cmd[3]);
+					for (unsigned long q = 0; q < operators.size(); q++)
+					{
+						if (operators[q] == client1)
+						{
+							return (0);
+						}
+						else
+						{
+							it->second.addoperator(client1);
+						}
+					}
+				else if (!cmd[2].compare("+l"))
+				{
+					i->second.setL(true);
+					if (cmd[3])
+					{
+						for (int j = 0; cmd[3][j]; j++;)
+						{
+							if (!isdigit(cmd[3][j]))
+								ERR_NEEDMOREPARAMS;
+							it->second.setLimit(atoi(cmd[3]))
+						}
+					}
+					else
+						ERR_NEEDMOREPARAMS;
+				}
+				else if (!cmd[2].compare("-l"))
+				{
+					it->second.setL(false);
+				}
+				else
+					ERR_UMODEUNKNOWNFLAG;
+				}
+			}
+		}
+	}
+}
 
-// 					}
-
-// 				}
-// 			else if (token[2].compare("+l"))
-// 			{
-// 				i->second.setL(true);
-// 				if (token[3])
-// 				{
-// 					for (int j = 0; token[3][j]; j++;)
-// 					{
-// 						if (!isdigit(token[3][j]))
-// 							not a number;
-// 						it->second.setLimit(atoi(token[3]))
-// 					}
-// 				}
-// 				else
-// 					channel doesnt exist
-// 			}
-// 			else if (token[2].compare("-l"))
-// 			{
-// 				it->second.setL(false);
-// 			}
-// 			else
-// 				wrong flag;
-
-// 			}
-// 		else
-// 			not operator;
-// 		}
-
-// }
 

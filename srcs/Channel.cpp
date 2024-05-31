@@ -122,3 +122,4 @@ void Channel::setT( const bool &i ) { _i = i; }
 void Channel::setI( const bool &t ) { _t = t; }
 void Channel::setK( const bool &k ) { _k = k; }
 void Channel::setL( const bool &l ) { _l = l; }
+void Channel::setTopic( const std::string topic ) { _topic = topic; }
