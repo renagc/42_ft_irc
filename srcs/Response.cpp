@@ -13,8 +13,11 @@ void Response::broadcastChannel( Client *client, Channel *channel, const std::st
 	std::vector<Client *> clients = channel->getClients();
 	for (unsigned long i = 0; i < clients.size(); i++)
 	{
-		if (send(clients[i]->getFd(), msg.c_str(), msg.size(), 0) == -1)
-			std::cerr << "send problem" << std::endl;
+		if (client != clients[i])
+		{
+			if (send(clients[i]->getFd(), msg.c_str(), msg.size(), 0) == -1)
+				std::cerr << "send problem" << std::endl;
+		}
 	}
 }
 
@@ -69,4 +72,8 @@ void Response::RPL_PART( Client *client, Channel *channel, const std::string &me
 }
 
 // JOIN
-void Response::RPL_JOIN( Client *client, Channel *channel ) { broadcastChannel(client, channel, "JOIN #" + channel->getName() + "\r\n"); }
+void Response::RPL_JOIN( Client *client, Channel *channel )
+{
+	Response::message(client, "JOIN #" + channel->getName() + "\r\n");
+	broadcastChannel(client, channel, "JOIN #" + channel->getName() + "\r\n");
+}

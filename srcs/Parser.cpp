@@ -187,6 +187,7 @@ void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 					continue ;
 				}
 			}
+			channel->add(client);
 		}
 		log("client joined channel", client->getNick(), &channels[i][1]);
 		Response::RPL_JOIN(client, &_channels->find(&channels[i][1])->second);
