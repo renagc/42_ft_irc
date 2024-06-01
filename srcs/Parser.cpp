@@ -145,6 +145,18 @@ void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 {
 	if (cmd.size() < 2)
 		return Response::ERR_NEEDMOREPARAMS(client, "JOIN");
+	if (!cmd[1].compare("0"))
+	{
+		std::map<std::string, Channel>::iterator it = _channels->begin();
+		for (; it != _channels->end(); it++)
+		{
+			Channel *channel = &it->second;
+			std::string channel_name = "#" + channel->getName();
+			if (channel->findClient(client))
+				partCommand(client, strtov(3, "PART", channel_name.c_str(), "join 0 pressed"));
+		}
+		return ;
+	}
 	std::vector<std::string> channels = split(cmd[1], ",");
 	std::vector<std::string> keys;
 	if (cmd.size() > 2)
