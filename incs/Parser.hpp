@@ -35,7 +35,7 @@ class Parser
 		void								userCommand( Client *client, const std::vector<std::string> &cmd );
 
 		// join command
-		void								joinCommand( Client *client, const std::string &channel_name );
+		void								joinCommand( Client *client, const std::vector<std::string> &cmd );
 
 		// privmsg command
 		void								privmsgCommand( Client *client, const std::string &channel_name, const std::string &message );

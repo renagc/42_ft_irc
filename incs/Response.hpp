@@ -18,9 +18,6 @@
 # define RPL_PONG(nick, user, token) (":" + nick + "!" + user + "@localhost PONG " + token + "\r\n")
 # define RPL_NOTICE(nick, user, target, message) (":" + nick + "!" + user + "@localhost NOTICE " + target + " " + message + "\r\n")
 
-// JOIN
-# define RPL_JOIN(nick, user, host, channel) (":" + USER(nick, user, host) + " JOIN #" + channel + "\r\n");
-
 // PRIVMSG
 # define ERR_NOSUCHNICK(nick, target) (":localhost 401 " + nick + " " + target + " :No such nick/channel" + "\r\n");
 # define RPL_PRIVMSG(nick, user, target, message) (":" + nick + "!" + user + "@localhost PRIVMSG " + target + " :" + message + "\r\n");
@@ -38,7 +35,6 @@
 # define RPL_TOPIC(nick, user, host, channel, topic) (":" + USER(nick, user, host) + " TOPIC #" + channel + " :" + topic + "\r\n");
 
 // MODE
-# define ERR_BADCHANNELKEY(nick, channel) (":localhost 475 " + nick + " #" + channel + " :Cannot join channel (+k)" + "\r\n");
 # define ERR_UMODEUNKNOWNFLAG(nick) (":localhost 501 " + nick + " :Unknown MODE flag" + "\r\n");
 # define RPL_MODEL(nick, user, host, channel, mode) (":" + USER(nick, user, host) + " MODE #" + channel + " " + mode + "\r\n");
 
@@ -66,9 +62,15 @@ class Response
 		// CHANNEL numeric codes
 		static void ERR_NOSUCHCHANNEL( Client *client, const std::string &channel );
 		static void ERR_NOTONCHANNEL( Client *client, const std::string &channel );
+		static void ERR_INVITEONLYCHAN( Client *client, const std::string &channel );
+		static void ERR_CHANNELISFULL( Client *client, const std::string &channel );
+		static void ERR_BADCHANNELKEY( Client *client, const std::string &channel );
 
 		// PART numeric codes
 		static void RPL_PART( Client *client, Channel *channel, const std::string &message );
+
+		// JOIN numeric codes
+		static void RPL_JOIN( Client *client, Channel *channel );
 };
 
 #endif

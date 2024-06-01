@@ -21,7 +21,7 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 	else if ( client->getLogged() )
 	{
 		if (!cmd[0].compare("JOIN"))
-			return (joinCommand(client, cmd[1]));
+			return (joinCommand(client, cmd));
 		else if (!cmd[0].compare("PRIVMSG"))
 			return (privmsgCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
 		// else if (!cmd[0].compare("KICK"))
@@ -123,27 +123,74 @@ void Parser::userCommand( Client *client, const std::vector<std::string> &cmd )
 	log(std::string("set user to: ").append(cmd[1]), client->getId());
 }
 
+/*
+
+	ERR_NEEDMOREPARAMS -- done
+	ERR_INVITEONLYCHAN -- done
+	ERR_CHANNELISFULL -- done
+	ERR_NOSUCHCHANNEL
+	ERR_TOOMANYTARGETS
+	RPL_TOPIC
+
+	ERR_BANNEDFROMCHAN
+	ERR_BADCHANNELKEY
+	ERR_BADCHANMASK
+	ERR_TOOMANYCHANNELS
+	ERR_UNAVAILRESOURCE
+
+*/
+
 // JOIN #channel need to implement all the error messages
-void Parser::joinCommand( Client *client, const std::string &channel_name )
+void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 {
-	if (channel_name.empty() || channel_name.at(0) != '#')
-	{
-		log("no channel name given", client->getId());
+	if (cmd.size() < 2)
 		return Response::ERR_NEEDMOREPARAMS(client, "JOIN");
-	}
-	Channel	*channel = NULL;
-	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
-	if (it != _channels->end())
-		channel = &it->second;
-	if (!channel)
+	std::vector<std::string> channels = split(cmd[1], ",");
+	std::vector<std::string> keys;
+	if (cmd.size() > 2)
+		keys = split(cmd[2], ",");
+	for (unsigned long i = 0; i < channels.size(); i++)
 	{
-		_server->createChannel(&channel_name[1], client);
-		channel = &_channels->find(&channel_name[1])->second;
+		if (channels[i].at(0) != '#')
+		{
+			Response::ERR_NOSUCHCHANNEL(client, channels[i]);
+			continue ;
+		}
+		std::map<std::string, Channel>::iterator it = _channels->find(&channels[i][1]);
+		if (it == _channels->end())
+		{
+			if (channels[i].size() > 50 || channels[i].find(" ") != std::string::npos || channels[i].find("\a") != std::string::npos || channels[i].find(",") != std::string::npos)
+			{
+				Response::ERR_NOSUCHCHANNEL(client, &channels[i][1]);
+				continue ;
+			}
+			_server->createChannel(&channels[i][1], client);
+		}
+		else
+		{
+			Channel *channel = &it->second;
+			if (channel->getI())
+			{
+				Response::ERR_INVITEONLYCHAN(client, channel->getName());
+				continue ;
+			}
+			else if (channel->getL() && channel->getLimit() < (int)channel->getClients().size())
+			{
+				Response::ERR_CHANNELISFULL(client, channel->getName());
+				continue ;
+			}
+			else if (channel->getK())
+			{
+				if (keys.size() < i + 1 || keys[i].compare(channel->getPw()))
+				{
+					Response::ERR_BADCHANNELKEY(client, channel->getName());
+					continue ;
+				}
+			}
+		}
+		log("client joined channel", client->getNick(), &channels[i][1]);
+		Response::RPL_JOIN(client, &_channels->find(&channels[i][1])->second);
 	}
-	else
-		channel->add(client);
-	log("client joined channel", client->getNick(), channel->getName());
-	throw RPL_JOIN(client->getNick(), client->getUser(), client->getHost(), channel->getName());
 }
 
 // TODO: verificar o parsing do target

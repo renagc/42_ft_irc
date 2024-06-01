@@ -57,6 +57,9 @@ void Response::RPL_WELCOME( Client *client ) { numericReply(client, "001", std::
 // CHANNEL
 void Response::ERR_NOSUCHCHANNEL( Client *client, const std::string &channel ) { numericReply(client, "403", strtov(1, channel.c_str()), "No such channel"); }
 void Response::ERR_NOTONCHANNEL( Client *client, const std::string &channel ) { numericReply(client, "442", strtov(1, channel.c_str()), "You're not on that channel"); }
+void Response::ERR_INVITEONLYCHAN( Client *client, const std::string &channel ) { numericReply(client, "473", strtov(1, channel.c_str()), "Cannot join channel (+i)"); }
+void Response::ERR_CHANNELISFULL( Client *client, const std::string &channel ) { numericReply(client, "471", strtov(1, channel.c_str()), "Cannot join channel (+l)"); }
+void Response::ERR_BADCHANNELKEY( Client *client, const std::string &channel ) { numericReply(client, "475", strtov(1, channel.c_str()), "Cannot join channel (+k)"); }
 
 // PART
 void Response::RPL_PART( Client *client, Channel *channel, const std::string &message )
@@ -64,3 +67,6 @@ void Response::RPL_PART( Client *client, Channel *channel, const std::string &me
 	Response::message(client, "PART #" + channel->getName() + " :" + message + "\r\n");
 	broadcastChannel(client, channel, "PART #" + channel->getName() + " :" + message + "\r\n");
 }
+
+// JOIN
+void Response::RPL_JOIN( Client *client, Channel *channel ) { broadcastChannel(client, channel, "JOIN #" + channel->getName() + "\r\n"); }
