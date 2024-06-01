@@ -77,3 +77,10 @@ void Response::RPL_JOIN( Client *client, Channel *channel )
 	Response::message(client, "JOIN #" + channel->getName() + "\r\n");
 	broadcastChannel(client, channel, "JOIN #" + channel->getName() + "\r\n");
 }
+
+void Response::RPL_TOPIC( Client *client, const std::string &channel, const std::string &topic ) { Response::message(client, "TOPIC #" + channel + " :" + topic + "\r\n"); }
+void Response::RPL_NAMREPLY( Client *client, const std::string &channel, const std::string &users )
+{
+	std::string new_channel = "#" + channel;
+	Response::numericReply(client, "353", strtov(2, "=", new_channel.c_str()), users);
+}

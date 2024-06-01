@@ -31,9 +31,6 @@
 // CHANNEL MESSAGE
 # define RPL_CHANNEL(nick, user, host, channel, message) (":" + USER(nick, user, host) + " PRIVMSG #" + channel + " :" + message + "\r\n");
 
-// TOPIC
-# define RPL_TOPIC(nick, user, host, channel, topic) (":" + USER(nick, user, host) + " TOPIC #" + channel + " :" + topic + "\r\n");
-
 // MODE
 # define ERR_UMODEUNKNOWNFLAG(nick) (":localhost 501 " + nick + " :Unknown MODE flag" + "\r\n");
 # define RPL_MODEL(nick, user, host, channel, mode) (":" + USER(nick, user, host) + " MODE #" + channel + " " + mode + "\r\n");
@@ -71,6 +68,8 @@ class Response
 
 		// JOIN numeric codes
 		static void RPL_JOIN( Client *client, Channel *channel );
+		static void RPL_TOPIC( Client *client, const std::string &channel, const std::string &topic );
+		static void RPL_NAMREPLY( Client *client, const std::string &channel, const std::string &users );
 };
 
 #endif

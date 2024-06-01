@@ -108,6 +108,27 @@ const std::string &Channel::getTopic( void ) const { return(_topic); }
 const int &Channel::getLimit( void ) const { return(_limit); }
 const std::string &Channel::getPw( void ) const { return(_pw); }
 
+std::string Channel::getUsers( void )
+{
+	std::string operators;
+	for (unsigned long i = 0; i < _operators.size(); i++)
+	{
+		operators += "@" + _operators[i]->getNick();
+		if (i + 1 < _operators.size())
+			operators += " ";
+	}
+	std::string clients;
+	for (unsigned long i = 0; i < _clients.size(); i++)
+	{
+		if (std::find(_operators.begin(), _operators.end(), _clients[i]) != _operators.end())
+			continue ;
+		clients += _clients[i]->getNick();
+		if (i + 1 < _clients.size())
+			clients += " ";
+	}
+	return(clients + " " + operators);
+}
+
 void Channel::setT( const bool &i ) { _i = i; }
 void Channel::setI( const bool &t ) { _t = t; }
 void Channel::setK( const bool &k ) { _k = k; }

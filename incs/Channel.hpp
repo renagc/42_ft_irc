@@ -3,6 +3,7 @@
 
 # include <iostream>
 # include <vector>
+# include <algorithm>
 
 # include "Client.hpp"
 
@@ -46,6 +47,7 @@ class Channel
 		const std::string				&getTopic( void ) const;
 		const int						&getLimit( void ) const;
 		const std::string				&getPw( void ) const;
+		std::string						getUsers( void );
 
 		/* set funcs */
 		void							setId( int id );
