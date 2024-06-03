@@ -2,23 +2,24 @@
 # define RESPONSE_HPP
 
 # include <iostream>
+# include <sys/socket.h>
+# include <vector>
+# include <string>
+# include <map>
+
+// irc libs
+# include "Channel.hpp"
 # include "Client.hpp"
+# include "Server.hpp"
 
 # define USER(nick, user, host) (nick + "!~" + user + "@" + host)
-# define RPL_WELCOME(nick, user, host) (":localhost 001 " + nick + " :Welcome to the ft_irc " + USER(nick, user, host) + "\r\n")
 
+//CHANNEL
+# define ERR_NOSUCHCHANNEL(nick, target) (":localhost 403 " + nick + " " + target + " :No such channel" + "\r\n");
+# define ERR_USERNOTINCHANNEL(nick, target) (":localhost 403 " + nick + " " + target + "They aren't on channel " + "\r\n");
 // PING
 # define RPL_PONG(nick, user, token) (":" + nick + "!" + user + "@localhost PONG " + token + "\r\n")
 # define RPL_NOTICE(nick, user, target, message) (":" + nick + "!" + user + "@localhost NOTICE " + target + " " + message + "\r\n")
-
-// NICK
-# define ERR_NONICKNAMEGIVEN(nick) (":localhost 431 " + nick + " :No nickname given" + "\r\n");
-# define ERR_ERRONEUSNICKNAME(nick, nickname) (":localhost 432 " + nick + " " + nickname + " :Erroneus nickname" + "\r\n");
-# define ERR_NICKNAMEINUSE(nick, nickname) (":localhost 433 " + nick + " " + nickname + " :Nickname is already in use" + "\r\n");
-# define RPL_NICK(nick, user, host, nickname) (":" + USER(nick, user, host) + " NICK :" + nickname + "\r\n");
-
-// USER
-# define ERR_NEEDMOREPARAMS(nick, command) (":localhost 461 " + nick + " " + command + " :Not enough parameters" + "\r\n");
 
 // JOIN
 # define RPL_JOIN(nick, user, host, channel) (":" + USER(nick, user, host) + " JOIN #" + channel + "\r\n");
@@ -35,5 +36,42 @@
 
 // CHANNEL MESSAGE
 # define RPL_CHANNEL(nick, user, host, channel, message) (":" + USER(nick, user, host) + " PRIVMSG #" + channel + " :" + message + "\r\n");
+
+// TOPIC
+# define RPL_TOPIC(nick, user, host, channel, topic) (":" + USER(nick, user, host) + " TOPIC #" + channel + " :" + topic + "\r\n");
+
+// MODE
+# define ERR_BADCHANNELKEY(nick, channel) (":localhost 475 " + nick + " #" + channel + " :Cannot join channel (+k)" + "\r\n");
+# define ERR_UMODEUNKNOWNFLAG(nick) (":localhost 501 " + nick + " :Unknown MODE flag" + "\r\n");
+# define RPL_MODEL(nick, user, host, channel, mode) (":" + USER(nick, user, host) + " MODE #" + channel + " " + mode + "\r\n");
+
+class Response
+{
+	private:
+		static std::string userPrefix( Client *client );
+	public:
+		~Response();
+		static void broadcastChannel( Client *client, Channel *channel, const std::string &response );
+		static void broadcastAll( const std::map<int, Client> &clients, const std::string &response );
+		static void message( Client *client, const std::string &response );
+		static void numericReply( Client *client, const std::string &code, const std::vector<std::string> &args, const std::string &response );
+
+		static void RPL_WELCOME( Client *client );
+		static void ERR_NEEDMOREPARAMS( Client *client, const std::string &command );
+
+		// NICK numeric codes
+		static void ERR_NONICKNAMEGIVEN( Client *client );
+		static void ERR_ERRONEUSNICKNAME( Client *client, const std::string &nickname );
+		static void ERR_NICKNAMEINUSE( Client *client, const std::string &nickname );
+		static void RPL_NICK( Client *client, const std::map<int, Client> &clients, const std::string &nickname );
+		static void ERR_ALREADYREGISTERED( Client *client );
+
+		// CHANNEL numeric codes
+		static void ERR_NOSUCHCHANNEL( Client *client, const std::string &channel );
+		static void ERR_NOTONCHANNEL( Client *client, const std::string &channel );
+
+		// PART numeric codes
+		static void RPL_PART( Client *client, Channel *channel, const std::string &message );
+};
 
 #endif

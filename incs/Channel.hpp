@@ -52,6 +52,7 @@ class Channel
 		void							setI( const bool &t );
 		void							setK( const bool &k );
 		void							setL( const bool &l );
+		void							setTopic( const std::string topic );
 		void							addOperator( Client *client );
 		void							removeOperator( Client *client );
 

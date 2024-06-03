@@ -24,14 +24,14 @@ void Parser::chooseParsing(Client *client, std::vector<std::string> cmd)
 			return (privmsgCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
 		else if (!cmd[0].compare("KICK"))
 			return (kickCommand(client, cmd))
-		// else if (cmd[0].compare("INVITE"))
-		// 	return (inviteParse(cmd));
-		// else if (cmd[0].compare("TOPIC"))
-		// 	return (topicParse(cmd));
-		// else if (cmd[0].compare("MODE"))
-		// 	return (modeParse(cmd));
-		else if (!cmd[0].compare("CAP"))
-			return;
+		else if (cmd[0].compare("INVITE"))
+			return (inviteParse(client, cmd));
+		else if (cmd[0].compare("TOPIC"))
+			return (topicParse(client, cmd));
+		else if (cmd[0].compare("MODE"))
+			return (modeParse(client, cmd));
+		//else if (!cmd[0].compare("CAP"))
+		//	return;
 	}
 	else
 		throw ERR_UNKNOWNCOMMAND(client->getNick(), cmd[0]);
@@ -219,7 +219,7 @@ void Parser::privmsgCommand(Client *client, const std::string &channel_name, con
 void Parser::kickCommand(Client *client, const std::vector<std::string> cmd)
 {
 	if (cmd[1].empty() || cmd[2].empty()) // parametros insuficientes
-		ERR_NEEDMOREPARAMS;
+		return ERR_NEEDMOREPARAMS(client->getNick(), "KICK");;
 	if (cmd[1][0] != '#') // sem #
 		ERR_NOSUCHCHANNEL;
 	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
@@ -280,12 +280,12 @@ void Parser::kickCommand(Client *client, const std::vector<std::string> cmd)
 void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
  {
 	if (cmd[1].empty() || cmd[2].empty()) // parametros insuficientes
-		ERR_NEEDMOREPARAMS;
+		return Response::ERR_NEEDMOREPARAMS(client, "INVITE");
 	if (cmd[2][0] != '#') // sem #
-		ERR_NOSUCHCHANNEL;
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[2][1]);
 	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[2][1]);
 	if (it == _channels->end()) // channel nao existe
-		ERR_NOSUCHCHANNEL;
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[2][1]);
 	std::vector<Client *> clientsOnChannel = it->second.getClients();
 	std::vector<Client *> operatorsOnChannel = it->second.getOperators();
 	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
@@ -313,18 +313,18 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 
 		}
 	}
-	ERR_USERNOTINCHANNEL; // client que convida nao esta no channel
+	return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[2][1]); // client que convida nao esta no channel
  }
 
  int Parser::TopicParse(Client *client, const std::vector<std::string> cmd)
  {
 	if (cmd[1].empty()) // parametros insuficientes
-		ERR_NEEDMOREPARAMS;
+		throw ERR_NEEDMOREPARAMS(client->getNick(), "TOPIC");
 	if (cmd[1][0] != '#') // sem #
-		ERR_NOSUCHCHANNEL;
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[1][1]);
 	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
 	if (it == _channels->end()) // channel nao existe
-		ERR_NOSUCHCHANNEL;
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[1][1]);
 	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
 	{
 		if (clientsOnChannel[i] ==  client)
@@ -352,17 +352,17 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 		}
 	}
 }
- int Parser::ModeParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server)
+ int Parser::ModeParse(Client *client, const std::vector<std::string> cmd)
  {
 	if (cmd[1].empty()) // parametros insuficientes
-		ERR_NEEDMOREPARAMS;
+		throw ERR_NEEDMOREPARAMS(client->getNick(), "MODE");
 	if (cmd[1][0] != '#') // sem #
-		ERR_NOSUCHCHANNEL;
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[1][1]);
 	if (cmd[2])
 		ERR_UMODEUNKNOWNFLAG;
 	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
 	if (it == _channels->end()) // channel nao existe
-		ERR_NOSUCHCHANNEL;
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[1][1]);
 	std::vector<Client *> clientsOnChannel = it->second.getClients();
 	std::vector<Client *> operatorsOnChannel = it->second.getOperators();
 	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
@@ -430,12 +430,12 @@ void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
 						for (int j = 0; cmd[3][j]; j++;)
 						{
 							if (!isdigit(cmd[3][j]))
-								ERR_NEEDMOREPARAMS;
+								return Response::ERR_NEEDMOREPARAMS(client, "MODE");
 							it->second.setLimit(atoi(cmd[3]))
 						}
 					}
 					else
-						ERR_NEEDMOREPARAMS;
+						return Response::ERR_NEEDMOREPARAMS(client, "MODE");
 				}
 				else if (!cmd[2].compare("-l"))
 				{
