@@ -38,6 +38,12 @@ void Response::message( Client *client, const std::string &response )
 		std::cerr << "send problem" << std::endl;
 }
 
+void Response::ircMessage( Client *client, const std::string &response )
+{
+	if (send(client->getFd(), response.c_str(), response.size(), 0) == -1)
+		std::cerr << "send problem" << std::endl;
+}
+
 void Response::numericReply( Client *client, const std::string &code, const std::vector<std::string> &args, const std::string &message )
 {
 	std::string msg = ":localhost " + code + " " + client->getNick();
@@ -85,3 +91,15 @@ void Response::RPL_NAMREPLY( Client *client, const std::string &channel, const s
 	std::string new_channel = "#" + channel;
 	Response::numericReply(client, "353", strtov(2, "=", new_channel.c_str()), users);
 }
+void Response::ERR_BANNEDFROMCHAN( Client *client, const std::string &channel ) { numericReply(client, "474", strtov(1, channel.c_str()), "Cannot join channel (+b)"); }
+
+// QUIT
+void Response::RPL_QUIT( Client *client, Channel *channel, const std::string &message ) { Response::broadcastChannel(client, channel, "QUIT :" + message + "\r\n"); }
+
+// KICK
+void Response::ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel ) { numericReply(client, "482", strtov(1, channel.c_str()), "You're not channel operator"); }
+void Response::RPL_KICK( Client *client, Channel *channel, const std::string &nickname )
+{
+	Response::broadcastChannel(client, channel, "KICK #" + channel->getName() + " " + nickname + "\r\n");
+}
+void Response::ERR_USERNOTINCHANNEL( Client *client, const std::string &channel, const std::string &nickname ) { numericReply(client, "441", strtov(2, nickname.c_str(), channel.c_str()), "They aren't on that channel"); }

@@ -22,9 +22,6 @@
 # define ERR_NOSUCHNICK(nick, target) (":localhost 401 " + nick + " " + target + " :No such nick/channel" + "\r\n");
 # define RPL_PRIVMSG(nick, user, target, message) (":" + nick + "!" + user + "@localhost PRIVMSG " + target + " :" + message + "\r\n");
 
-// KICK
-# define RPL_KICK(nick, user, channel, target) (":" + nick + "!" + user + "@localhost KICK #" + channel + " " + target + "\r\n");
-
 // Invalid command
 # define ERR_UNKNOWNCOMMAND(nick, command) (":localhost 421 " + nick + " " + command + " :Unknown command" + "\r\n");
 
@@ -43,6 +40,7 @@ class Response
 		~Response();
 		static void broadcastChannel( Client *client, Channel *channel, const std::string &response );
 		static void broadcastAll( const std::map<int, Client> &clients, const std::string &response );
+		static void ircMessage( Client *client, const std::string &response );
 		static void message( Client *client, const std::string &response );
 		static void numericReply( Client *client, const std::string &code, const std::vector<std::string> &args, const std::string &response );
 
@@ -70,6 +68,15 @@ class Response
 		static void RPL_JOIN( Client *client, Channel *channel );
 		static void RPL_TOPIC( Client *client, const std::string &channel, const std::string &topic );
 		static void RPL_NAMREPLY( Client *client, const std::string &channel, const std::string &users );
+		static void ERR_BANNEDFROMCHAN( Client *client, const std::string &channel );
+
+		// QUIT
+		static void RPL_QUIT( Client *client, Channel *channel, const std::string &message );
+
+		// KICK
+		static void ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel );
+		static void RPL_KICK( Client *client, Channel *channel, const std::string &nickname );
+		static void ERR_USERNOTINCHANNEL( Client *client, const std::string &channel, const std::string &nickname );
 };
 
 #endif

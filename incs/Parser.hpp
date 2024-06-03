@@ -41,7 +41,7 @@ class Parser
 		void								privmsgCommand( Client *client, const std::string &channel_name, const std::string &message );
 
 		// kick command
-		void								kickCommand( Client *client, const std::string &channel_name, const std::string &username );
+		void								kickCommand( Client *client, const std::vector<std::string> &cmd );
 
 		// part command
 		void								partCommand( Client *client, const std::vector<std::string> &cmd );
@@ -50,6 +50,7 @@ class Parser
 		void								topicCommand( Client *client, const std::string &channel_name, const std::string &topic );
 		void								modeCommand( Client *client, const std::vector<std::string> &cmd );
 		void								whoCommand( Client *client, const std::string &mask, const std::string &o );
+		void								quitCommand( Client *client, const std::string &message );
 
 		
 };
