@@ -37,6 +37,7 @@ void Response::message( Client *client, const std::string &response )
 	if (send(client->getFd(), msg.c_str(), msg.size(), 0) == -1)
 		std::cerr << "send problem" << std::endl;
 }
+
 void Response::numericReply( Client *client, const std::string &code, const std::vector<std::string> &args, const std::string &message )
 {
 	std::string msg = ":localhost " + code + " " + client->getNick();

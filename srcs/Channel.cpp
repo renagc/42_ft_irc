@@ -126,7 +126,12 @@ std::string Channel::getUsers( void )
 		if (i + 1 < _clients.size())
 			clients += " ";
 	}
-	return(clients + " " + operators);
+	if (!operators.empty() && !clients.empty())
+		return(clients + " " + operators);
+	else if (operators.empty())
+		return(clients);
+	else
+		return(operators);
 }
 
 void Channel::setT( const bool &i ) { _i = i; }
