@@ -3,6 +3,7 @@
 
 # include <iostream>
 # include <vector>
+# include <algorithm>
 
 # include "Client.hpp"
 
@@ -14,6 +15,7 @@ class Channel
 		int						_id;
 		std::string				_name;
 		std::vector<Client *>	_clients;
+		std::vector<Client *>	_clients_kicked;
 		std::string				_pw;
 		int						_limit;
 		std::string				_topic;
@@ -46,6 +48,7 @@ class Channel
 		const std::string				&getTopic( void ) const;
 		const int						&getLimit( void ) const;
 		const std::string				&getPw( void ) const;
+		std::string						getUsers( void );
 
 		/* set funcs */
 		void							setId( int id );
@@ -57,6 +60,7 @@ class Channel
 		void							setLimit( int limit );
 		void							setPw( const std::string &pw );
 		void							addOperator( Client *client );
+		void							addKicked( Client *client );
 		void							removeOperator( Client *client );
 
 		bool							findClient( Client *client ) const;
@@ -65,6 +69,8 @@ class Channel
 		/* debug funcs */
 		void							printClients( void ) const;
 		void							printPrivate( void ) const;
+		bool							isOperator(Client *client);
+		bool							isKicked(Client *client);
 };
 
 #endif

@@ -88,6 +88,7 @@ int Channel::getId( void ) const { return(_id); }
 
 std::vector<Client *> Channel::getOperators( void ) const { return(_operators); }
 void Channel::addOperator( Client *client ) { _operators.push_back(client); }
+void Channel::addKicked( Client *client ) { _clients_kicked.push_back(client); }
 void Channel::removeOperator( Client *client )
 {
 	std::vector<Client *>::iterator it;
@@ -107,6 +108,52 @@ const bool &Channel::getL( void ) const { return(_l); }
 const std::string &Channel::getTopic( void ) const { return(_topic); }
 const int &Channel::getLimit( void ) const { return(_limit); }
 const std::string &Channel::getPw( void ) const { return(_pw); }
+
+bool Channel::isOperator(Client *client)
+{
+	for (unsigned long i = 0; i < _operators.size(); i++)
+	{
+		if (_operators[i] == client)
+			return (true);
+	}
+	return (false);
+}
+
+bool Channel::isKicked(Client *client)
+{
+	for (unsigned long i = 0; i < _clients_kicked.size(); i++)
+	{
+		if (_clients_kicked[i] == client)
+			return (true);
+	}
+	return (false);
+}
+
+std::string Channel::getUsers( void )
+{
+	std::string operators;
+	for (unsigned long i = 0; i < _operators.size(); i++)
+	{
+		operators += "@" + _operators[i]->getNick();
+		if (i + 1 < _operators.size())
+			operators += " ";
+	}
+	std::string clients;
+	for (unsigned long i = 0; i < _clients.size(); i++)
+	{
+		if (std::find(_operators.begin(), _operators.end(), _clients[i]) != _operators.end())
+			continue ;
+		clients += _clients[i]->getNick();
+		if (i + 1 < _clients.size())
+			clients += " ";
+	}
+	if (!operators.empty() && !clients.empty())
+		return(clients + " " + operators);
+	else if (operators.empty())
+		return(clients);
+	else
+		return(operators);
+}
 
 void Channel::setT( const bool &i ) { _i = i; }
 void Channel::setI( const bool &t ) { _t = t; }

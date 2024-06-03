@@ -12,26 +12,31 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 {
 	if (cmd.size() < 1)
 		throw "Invalid command (more parameters needed)";
-	if (!cmd[0].compare("NICK"))
+	if (!cmd[0].compare("CAP"))
+	{
+		if (!cmd[1].compare("LS"))
+			return Response::ircMessage(client, ":localhost CAP * LS :multi-prefix sasl\r\n");
+		else if (!cmd[1].compare("REQ") || !cmd[1].compare("END"))
+			return Response::ircMessage(client, ":localhost CAP * ACK :multi-prefix sasl\r\n");
+	}
+	else if (!cmd[0].compare("NICK"))
 		return (nickCommand(client, cmd[1]));
 	else if (!cmd[0].compare("USER"))
 		return (userCommand(client, cmd));
-	else if (!cmd[0].compare("CAP"))
-		return ;
 	else if ( client->getLogged() )
 	{
 		if (!cmd[0].compare("JOIN"))
-			return (joinCommand(client, cmd[1]));
+			return (joinCommand(client, cmd));
 		else if (!cmd[0].compare("PRIVMSG"))
 			return (privmsgCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
-		// else if (!cmd[0].compare("KICK"))
-		// 	return (kickCommand(client, cmd[1], cmd[2]));
+		else if (!cmd[0].compare("KICK"))
+			return (kickCommand(client, cmd));
 		else if (!cmd[0].compare("PART"))
 			return (partCommand(client, cmd));
 		// else if (!cmd[0].compare("WHO"))
 		// 	return (whoCommand(client, cmd[1], cmd[2]));
-		// else if (!cmd[0].compare("QUIT"))
-		// 	throw RPL_QUIT(client->getNick(), client->getUser(), client->getHost(), joinString(cmd, cmd.begin() + 1));
+		else if (!cmd[0].compare("QUIT"))
+			return quitCommand(client, cmd[1]);
 		// else if (cmd[0].compare("INVITE"))
 		// 	return (inviteParse(cmd));
 		// else if (!cmd[0].compare("TOPIC"))
@@ -123,27 +128,159 @@ void Parser::userCommand( Client *client, const std::vector<std::string> &cmd )
 	log(std::string("set user to: ").append(cmd[1]), client->getId());
 }
 
+/*
+
+	ERR_NEEDMOREPARAMS -- done
+	ERR_INVITEONLYCHAN -- done
+	ERR_CHANNELISFULL -- done
+	ERR_NOSUCHCHANNEL
+	ERR_TOOMANYTARGETS
+	RPL_TOPIC
+
+	ERR_BANNEDFROMCHAN
+	ERR_BADCHANNELKEY
+	ERR_BADCHANMASK
+	ERR_TOOMANYCHANNELS
+	ERR_UNAVAILRESOURCE
+
+*/
+
 // JOIN #channel need to implement all the error messages
-void Parser::joinCommand( Client *client, const std::string &channel_name )
+void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 {
-	if (channel_name.empty() || channel_name.at(0) != '#')
-	{
-		log("no channel name given", client->getId());
+	if (cmd.size() < 2)
 		return Response::ERR_NEEDMOREPARAMS(client, "JOIN");
-	}
-	Channel	*channel = NULL;
-	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
-	if (it != _channels->end())
-		channel = &it->second;
-	if (!channel)
+	if (!cmd[1].compare("0"))
 	{
-		_server->createChannel(&channel_name[1], client);
-		channel = &_channels->find(&channel_name[1])->second;
+		std::map<std::string, Channel>::iterator it = _channels->begin();
+		for (; it != _channels->end(); it++)
+		{
+			Channel *channel = &it->second;
+			std::string channel_name = "#" + channel->getName();
+			if (channel->findClient(client))
+				partCommand(client, strtov(3, "PART", channel_name.c_str(), "join 0 pressed"));
+		}
+		return ;
 	}
-	else
-		channel->add(client);
-	log("client joined channel", client->getNick(), channel->getName());
-	throw RPL_JOIN(client->getNick(), client->getUser(), client->getHost(), channel->getName());
+	std::vector<std::string> channels = split(cmd[1], ",");
+	std::vector<std::string> keys;
+	if (cmd.size() > 2)
+		keys = split(cmd[2], ",");
+	for (unsigned long i = 0; i < channels.size(); i++)
+	{
+		if (channels[i].at(0) != '#')
+		{
+			Response::ERR_NOSUCHCHANNEL(client, channels[i]);
+			continue ;
+		}
+		std::map<std::string, Channel>::iterator it = _channels->find(&channels[i][1]);
+		if (it == _channels->end())
+		{
+			if (channels[i].size() > 50 || channels[i].find(" ") != std::string::npos || channels[i].find("\a") != std::string::npos || channels[i].find(",") != std::string::npos)
+			{
+				Response::ERR_NOSUCHCHANNEL(client, &channels[i][1]);
+				continue ;
+			}
+			_server->createChannel(&channels[i][1], client);
+		}
+		else
+		{
+			Channel *channel = &it->second;
+			if (channel->getI())
+			{
+				Response::ERR_INVITEONLYCHAN(client, channel->getName());
+				continue ;
+			}
+			else if (channel->getL() && channel->getLimit() < (int)channel->getClients().size())
+			{
+				Response::ERR_CHANNELISFULL(client, channel->getName());
+				continue ;
+			}
+			else if (channel->getK())
+			{
+				if (keys.size() < i + 1 || keys[i].compare(channel->getPw()))
+				{
+					Response::ERR_BADCHANNELKEY(client, channel->getName());
+					continue ;
+				}
+			}
+			if (channel->isKicked(client))
+			{
+				Response::ERR_BANNEDFROMCHAN(client, channel->getName());
+				continue ;
+			}
+			channel->add(client);
+		}
+		Channel *final_channel = &_channels->find(&channels[i][1])->second;
+		log("client joined channel", client->getNick(), &channels[i][1]);
+		Response::RPL_JOIN(client, final_channel);
+		Response::RPL_TOPIC(client, final_channel->getName(), final_channel->getTopic());
+		Response::RPL_NAMREPLY(client, final_channel->getName(), final_channel->getUsers());
+	}
+}
+
+void Parser::kickCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	if (cmd.size() < 3) // parametros insuficientes
+		return Response::ERR_NEEDMOREPARAMS(client, "KICK");
+	std::vector<std::string> channels = split(cmd[1], ",");
+	std::vector<std::string> users = split(cmd[2], ",");
+	for (unsigned long i = 0; i < channels.size(); i++)
+	{
+		if (channels[i][0] != '#') // sem #
+		{
+			Response::ERR_NOSUCHCHANNEL(client, channels[i]);
+			continue ;
+		}
+		std::map<std::string, Channel>::iterator it = _channels->find(&channels[i][1]);
+		if (it == _channels->end())
+		{
+			Response::ERR_NOSUCHCHANNEL(client, &channels[i][1]);
+			continue ;
+		}
+		if (!(*it).second.isOperator(client))
+		{
+			Response::ERR_CHANOPRIVSNEEDED(client, &channels[i][1]);
+			continue ;
+		}
+		if (users.size() < i + 1) // sem user
+		{
+			Response::ERR_NEEDMOREPARAMS(client, "KICK");
+			continue ;
+		}
+		std::vector<Client *> clientsOnChannel = (*it).second.getClients();
+		if (!(*it).second.findClient(client))
+		{
+			Response::ERR_USERNOTINCHANNEL(client, &channels[i][1], users[i]);
+			continue ;
+		}
+		log("client kicked from channel");
+		for (unsigned long j = 0; j < clientsOnChannel.size(); j++)
+		{
+			if (clientsOnChannel[j]->getNick() == users[i])
+			{
+				Response::message(client, "KICK #" + (*it).second.getName() + " " + users[i] + "\r\n");
+				Response::RPL_KICK(client, &(*it).second, users[i]);
+				(*it).second.removeClient(clientsOnChannel[j]);
+				(*it).second.removeOperator(clientsOnChannel[j]);
+				(*it).second.addKicked(clientsOnChannel[j]);
+				break ;
+			}
+		}
+	}
+}
+
+void Parser::quitCommand( Client *client, const std::string &message )
+{
+	std::map<std::string, Channel>::iterator it = _channels->begin();
+	for (; it != _channels->end(); it++)
+	{
+		Channel *channel = &it->second;
+		if (channel->findClient(client))
+			Response::RPL_QUIT(client, channel, &message[1]);
+	}
+	Response::message(client, "QUIT " + message + "\r\n");
+	_server->clientDisconnect(client);
 }
 
 // TODO: verificar o parsing do target

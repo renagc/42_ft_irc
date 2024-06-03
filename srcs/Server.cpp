@@ -58,6 +58,7 @@ Server::~Server()
 		close(_pfds[i].fd);
 	_pfds.clear();
 	close(_sockfd);
+	delete _parsing;
 	std::cout << "destructor called" << std::endl;
 }
 
@@ -218,7 +219,6 @@ void Server::knownConnection( int id )
 	else
 	{
 		msg.assign(buf, nbytes);
-		std::cout << msg;
 		std::vector<std::string> parse = split(msg, "\r\n");
 		std::vector<std::string>::iterator it;
 		for (it = parse.begin(); it != parse.end(); it++)
@@ -234,6 +234,7 @@ void Server::knownConnection( int id )
 			}
 		}
 	}
+	
 }
 
 // commands functions
