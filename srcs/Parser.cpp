@@ -472,7 +472,196 @@ void Parser::partCommand( Client *client, const std::vector<std::string> &cmd )
 // 	}
 // 	throw ERR_NOSUCHCHANNEL(client->getNick(), &channel_name[1]);
 // }
+void Parser::InviteParse(Client *client, const std::vector<std::string> cmd)
+ {
+	if (cmd.size() < 3) // parametros insuficientes
+		return Response::ERR_NEEDMOREPARAMS(client, "INVITE");
+	if (cmd[2][0] != '#') // sem #
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[2][1]);
+	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[2][1]);
+	if (it == _channels->end()) // channel nao existe
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[2][1]);
+	std::vector<Client *> clientsOnChannel = it->second.getClients();
+	std::vector<Client *> operatorsOnChannel = it->second.getOperators();
+	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
+	{
+		if (clientsOnChannel[i] ==  client)
+		{
+			if (!it->second.isOperator(client)) // nao e operador
+				ERR_CHANOPRIVSNEEDED;
+			for (unsigned long j = 0; j < clientsOnChannel.size(); j++)
+			{
+				if (!clientsOnChannel[j]->getNick().compare(cmd[1])) // user ja esta no channel
+					throw ERR_USERONCHANNEL;
+			}
+			if ((it->second.getL() == true && it->second._limit < it->second._clients.size()) || it->second.getL() == false)
+			{
+				if (_server.getClient(cmd1) != NULL)
+				{
+					it->second.add(_server.getClient(cmd1));
+					RPL_INVITING();
 
+				}
+				else // nickname nao existe
+					ERR_NOSUCHNICK;
+			}
+
+		}
+	}
+	return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[2][1]); // client que convida nao esta no channel
+ }
+
+ int Parser::TopicParse(Client *client, const std::vector<std::string> cmd)
+ {
+	if (cmd.size() < 3)// parametros insuficientes
+		throw ERR_NEEDMOREPARAMS(client->getNick(), "TOPIC");
+	if (cmd[1][0] != '#') // sem #
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[1][1]);
+	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
+	if (it == _channels->end()) // channel nao existe
+		return Response::ERR_NOSUCHCHANNEL(client->getNick(), &cmd[1][1]);
+	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
+	{
+		if (clientsOnChannel[i] ==  client)
+		{
+			if (it->second.getT() == false || (it->second.getT() == true && it->second.isOperator(client)))
+ 			{
+				if (!cmd[2])
+					RPL_NOTOPIC;
+				else
+				{
+					std::string topic = cmd[2];
+					for (int j = 3; j < cmd.size(); j++)
+					{
+						topic.append(" ");
+						topic.append(cmd[j]);
+						it->second.setTopic(topic); // criar funcao setTopic
+					}
+					RPL_TOPIC;
+
+				}
+
+			}
+			else // nao e operador e _t = true
+				ERR_CHANOPRIVSNEEDED;
+		}
+	}
+}
+
+ int Parser::ModeParse(Client *client, const std::vector<std::string> cmd)
+ {
+	if (cmd.size() < 3) // parametros insuficientes
+		throw ERR_NEEDMOREPARAMS(client, "MODE");
+	if (cmd[1][0] != '#') // sem #
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+	if (cmd[2])
+		ERR_UMODEUNKNOWNFLAG;
+	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
+	if (it == _channels->end()) // channel nao existe
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+	std::vector<Client *> clientsOnChannel = it->second.getClients();
+	std::vector<Client *> operatorsOnChannel = it->second.getOperators();
+	for (unsigned long i = 0; i < clientsOnChannel.size(); i++)
+	{
+		if (clientsOnChannel[i] ==  client)
+		{
+			if (!it->second.isOperator(client)) // nao e operador
+				ERR_CHANOPRIVSNEEDED;
+			else
+			{
+				if (!cmd[2].compare("+i"))
+				{
+					it->second.setI(true);
+					RPL_CHANNELMODEIS;
+				}
+				else if (!cmd[2].compare("-i"))
+				{
+					it->second.setI(false);
+					RPL_CHANNELMODEIS;
+				}
+				else if (!cmd[2].compare("+t"))
+				{
+					it->second.setT(true);
+					RPL_CHANNELMODEIS;
+				}
+				else if (!cmd[2].compare("-t"))
+				{
+					it->second.setT(false);
+					RPL_CHANNELMODEIS;
+				}
+				else if (!cmd[2].compare("+k"))
+				{
+					it->second.setK(true);
+					if (cmd.size() > 3)
+					{
+						setPW(cmd[3]);
+						RPL_CHANNELMODEIS;
+
+					}
+					else
+						setPW(NULL);
+				}
+				else if (!cmd[2].compare("-k"))
+				{
+					if (cmd.size() > 3 && !cmd[3].compare(it->second._pw))
+					{
+						it->second.setK(false);
+						setPW(NULL);
+						RPL_CHANNELMODEIS;
+					}
+					else
+						return RPL_CHANOPRIVSNEEDED;
+				}
+				else if (!cmd[2].compare("+o"))
+				{
+					if (cmd.size() > 3)
+					{
+						Client *client1;
+						client1 = findClient(cmd[3]);
+						for (unsigned long q = 0; q < operators.size(); q++)
+						{
+							if (operators[q] == client1)
+							{
+								return RPL_CHANOPRIVSNEEDED;
+							}
+							else
+							{
+								it->second.addoperator(client1);
+								RPL_CHANNELMODEIS;
+							}
+					}
+					else
+						return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+
+				}
+				else if (!cmd[2].compare("+l"))
+				{
+					i->second.setL(true);
+					if (cmd.size() > 3)
+					{
+						for (int j = 0; cmd[3][j]; j++;)
+						{
+							if (!isdigit(cmd[3][j]))
+								return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+						}
+						it->second.setLimit(atoi(cmd[3]));
+						RPL_CHANNELMODEIS;
+					}
+					else
+						return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+				}
+				else if (!cmd[2].compare("-l"))
+				{
+					it->second.setL(false);
+					RPL_CHANNELMODEIS;
+				}
+				else
+					ERR_UMODEUNKNOWNFLAG;
+				}
+			}
+		}
+	}
+}
 // void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd ) 
 // {
 // 	std::string channel_name = cmd[1];

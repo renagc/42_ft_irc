@@ -77,6 +77,9 @@ class Response
 		static void ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel );
 		static void RPL_KICK( Client *client, Channel *channel, const std::string &nickname );
 		static void ERR_USERNOTINCHANNEL( Client *client, const std::string &channel, const std::string &nickname );
+		// MODE
+		static void RPL_KICK( Client *client, Channel *channel, const std::string &nickname );
+		
 };
 
 #endif
