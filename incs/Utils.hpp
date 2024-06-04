@@ -13,6 +13,7 @@ void						log( const std::string &str, int id );
 void						log( const std::string &str, const std::string &from, const std::string &to );
 std::string					joinString( const std::vector<std::string> &vec, std::vector<std::string>::const_iterator pos );
 std::vector<std::string> 	strtov(int number, ...);
+std::string					itoa(int num);
 
 
 #endif // UTILS_HPP

@@ -6,6 +6,7 @@
 # include <algorithm>
 
 # include "Client.hpp"
+# include "Utils.hpp"
 
 class Client;
 
@@ -41,21 +42,22 @@ class Channel
 		std::vector<std::string>		getNicknames( void ) const;
 		std::vector<Client *>			getClients( void ) const;
 		std::vector<Client *>			getOperators( void ) const;
-		const bool						&getI( void ) const;
-		const bool						&getT( void ) const;
-		const bool						&getK( void ) const;
-		const bool						&getL( void ) const;
+		bool							getI( void ) const;
+		bool							getT( void ) const;
+		bool							getK( void ) const;
+		bool							getL( void ) const;
 		const std::string				&getTopic( void ) const;
 		const int						&getLimit( void ) const;
 		const std::string				&getPw( void ) const;
 		std::string						getUsers( void );
+		std::string						getMode( void );
 
 		/* set funcs */
 		void							setId( int id );
-		void							setT( const bool &i );
-		void							setI( const bool &t );
-		void							setK( const bool &k );
-		void							setL( const bool &l );
+		void							setT( bool i );
+		void							setI( bool t );
+		void							setK( bool k );
+		void							setL( bool l );
 		void							setTopic( const std::string &topic );
 		void							setLimit( int limit );
 		void							setPw( const std::string &pw );

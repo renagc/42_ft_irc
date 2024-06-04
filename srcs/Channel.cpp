@@ -87,7 +87,16 @@ void Channel::setId( int id ){ _id = id; }
 int Channel::getId( void ) const { return(_id); }
 
 std::vector<Client *> Channel::getOperators( void ) const { return(_operators); }
-void Channel::addOperator( Client *client ) { _operators.push_back(client); }
+void Channel::addOperator( Client *client )
+{
+	std::vector<Client *>::iterator it = _operators.begin();
+	for (; it != _operators.end(); it++)
+	{
+		if (*it == client)
+			return ;
+	}
+	_operators.push_back(client);
+}
 void Channel::addKicked( Client *client ) { _clients_kicked.push_back(client); }
 void Channel::removeOperator( Client *client )
 {
@@ -101,10 +110,10 @@ void Channel::removeOperator( Client *client )
 		_operators.erase(it);
 }
 
-const bool &Channel::getI( void ) const { return(_i); }
-const bool &Channel::getT( void ) const { return(_t); }
-const bool &Channel::getK( void ) const { return(_k); }
-const bool &Channel::getL( void ) const { return(_l); }
+bool Channel::getI( void ) const { return(_i); }
+bool Channel::getT( void ) const { return(_t); }
+bool Channel::getK( void ) const { return(_k); }
+bool Channel::getL( void ) const { return(_l); }
 const std::string &Channel::getTopic( void ) const { return(_topic); }
 const int &Channel::getLimit( void ) const { return(_limit); }
 const std::string &Channel::getPw( void ) const { return(_pw); }
@@ -155,10 +164,28 @@ std::string Channel::getUsers( void )
 		return(operators);
 }
 
-void Channel::setT( const bool &i ) { _i = i; }
-void Channel::setI( const bool &t ) { _t = t; }
-void Channel::setK( const bool &k ) { _k = k; }
-void Channel::setL( const bool &l ) { _l = l; }
+std::string Channel::getMode( void )
+{
+	std::string mode = "+";
+	if (_i)
+		mode += "i";
+	if (_t)
+		mode += "t";
+	if (_k)
+		mode += "k";
+	if (_l)
+	{
+		mode += "l";
+		if (_limit != -1)
+			mode += " " + itoa(_limit);
+	}
+	return (mode);
+}
+
+void Channel::setI( bool i ) { _i = i; }
+void Channel::setT( bool t ) { _t = t; }
+void Channel::setK( bool k ) { _k = k; }
+void Channel::setL( bool l ) { _l = l; }
 void Channel::setTopic( const std::string &topic ) { _topic = topic; }
 void Channel::setLimit( int limit ) { _limit = limit; }
 void Channel::setPw( const std::string &pw ) { _pw = pw; }

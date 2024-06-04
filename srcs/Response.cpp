@@ -103,3 +103,11 @@ void Response::RPL_KICK( Client *client, Channel *channel, const std::string &ni
 	Response::broadcastChannel(client, channel, "KICK #" + channel->getName() + " " + nickname + "\r\n");
 }
 void Response::ERR_USERNOTINCHANNEL( Client *client, const std::string &channel, const std::string &nickname ) { numericReply(client, "441", strtov(2, nickname.c_str(), channel.c_str()), "They aren't on that channel"); }
+
+// MODE
+void Response::ERR_UMODEUNKNOWNFLAG( Client *client ) { numericReply(client, "501", std::vector<std::string>(), "Unknown MODE flag"); }
+void Response::RPL_CHANNELMODEIS( Client *client, Channel *channel )
+{
+	ircMessage(client, ":localhost 324 " + client->getNick() + " #" + channel->getName() + " " + channel->getMode() + "\r\n");
+}
+void Response::ERR_KEYSET( Client *client, const std::string &channel ) { numericReply(client, "467", strtov(1, channel.c_str()), "Channel key already set"); }

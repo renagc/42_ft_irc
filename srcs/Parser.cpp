@@ -41,8 +41,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 		// 	return (inviteParse(cmd));
 		// else if (!cmd[0].compare("TOPIC"))
 		// 	return (topicCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
-		// else if (!cmd[0].compare("MODE"))
-		// 	return (modeCommand(client, cmd));
+		else if (!cmd[0].compare("MODE"))
+			return (modeCommand(client, cmd));
 	}
 	else
 		throw ERR_UNKNOWNCOMMAND(client->getNick(), cmd[0]);
@@ -348,6 +348,114 @@ void Parser::partCommand( Client *client, const std::vector<std::string> &cmd )
 		Response::RPL_PART(client, &(*it).second, partMessage);
 		if (!(*it).second.getClients().size() && !(*it).second.getOperators().size())
 			_channels->erase(it);
+	}
+}
+
+void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	if (cmd.size() < 2) 
+		return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+	if (cmd[1][0] != '#')
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+	
+	// channel nao existe
+	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[1][1]);
+	if (it == _channels->end()) 
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+
+	// sem args
+	if (cmd.size() < 3)
+		return Response::RPL_CHANNELMODEIS(client, &it->second);
+
+	if (!it->second.isOperator(client))
+		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
+	unsigned long params = 2;
+	for (unsigned long i = 2; i < cmd.size(); i++)
+	{
+		if (params > i && cmd.size() < params + 1)
+			i = params + 1;
+		if (cmd[i].at(0) != '+' && cmd[i].at(0) != '-')
+			return Response::ERR_UMODEUNKNOWNFLAG(client);
+		bool signal = cmd[i].at(0) == '+';
+		for (unsigned long j = 1; j < cmd[i].size(); j++)
+		{
+			if (cmd[i][j] == 'i' && it->second.getI() != signal)
+			{
+				it->second.setI(signal);
+				Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "i\r\n");
+			}
+			else if (cmd[i][j] == 't' && it->second.getT() == !signal)
+			{
+				it->second.setT(signal);
+				Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "t\r\n");
+			}
+			else if (cmd[i][j] == 'k')
+			{
+				params++;
+				if (params >= cmd.size())
+					Response::ERR_NEEDMOREPARAMS(client, "MODE");
+				else if (it->second.getK())
+				{
+					if (!signal && !it->second.getPw().compare(cmd[params]))
+					{
+						it->second.setK(signal);
+						it->second.setPw("");
+						Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+					}
+					else
+						Response::ERR_KEYSET(client, it->second.getName());
+				}
+				else
+				{
+					it->second.setK(signal);
+					it->second.setPw(cmd[params]);
+					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+				}
+				if (j + 1 == cmd[i].size() && cmd.size() > params)
+					i = params;
+			}
+			// else if (cmd[i][j] == 'l')
+			// {
+			// 	it->second.setL(signal);
+			// 	if (cmd.size() > 3)
+			// 	{
+			// 		for (int j = 0; cmd[3][j]; j++)
+			// 		{
+			// 			if (!isdigit(cmd[3][j]))
+			// 				return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+			// 		}
+			// 		it->second.setLimit(atoi(cmd[3].c_str()));
+			// 	}
+			// 	else
+			// 		return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+			// }
+			// else if (cmd[i][j] == 'o')
+			// {
+			// 	if (cmd.size() > 3)
+			// 	{
+			// 		std::vector<Client *> clients = it->second.getClients();
+			// 		for (unsigned long i = 0; i < clients.size(); i++)
+			// 		{
+			// 			if (!clients[i]->getNick().compare(cmd[3]))
+			// 			{
+			// 				it->second.addOperator(clients[i]);
+			// 				return Response::RPL_CHANNELMODEIS(client, it->second.getName(), "+o");
+			// 			}
+			// 		}
+			// 		if (it->second.isOperator(client))
+			// 			return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
+			// 		else
+			// 		{
+			// 			it->second.addOperator(client);
+			// 			return Response::RPL_CHANNELMODEIS(client, it->second.getName(), "+o");
+			// 		}
+			// 	}
+			// 	else
+			// 		return Response::ERR_NEEDMOREPARAMS(client, "MODE");
+			// }
+			// else
+			// 	return Response::ERR_UMODEUNKNOWNFLAG(client);
+		}
 	}
 }
 

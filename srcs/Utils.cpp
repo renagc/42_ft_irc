@@ -84,3 +84,23 @@ std::vector<std::string> strtov(int number, ...)
 	va_end(ap);
 	return (vec);
 }
+
+std::string itoa(int num)
+{
+	std::string result;
+	bool isNegative = false;
+	
+	if (num < 0)
+	{
+		isNegative = true;
+		num = -num;
+	}
+	while (num != 0)
+	{
+		result.insert(result.begin(), '0' + (num % 10));
+		num /= 10;
+	}
+	if (isNegative)
+		result.insert(result.begin(), '-');
+	return result;
+}

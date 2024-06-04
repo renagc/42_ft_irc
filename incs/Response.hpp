@@ -29,7 +29,6 @@
 # define RPL_CHANNEL(nick, user, host, channel, message) (":" + USER(nick, user, host) + " PRIVMSG #" + channel + " :" + message + "\r\n");
 
 // MODE
-# define ERR_UMODEUNKNOWNFLAG(nick) (":localhost 501 " + nick + " :Unknown MODE flag" + "\r\n");
 # define RPL_MODEL(nick, user, host, channel, mode) (":" + USER(nick, user, host) + " MODE #" + channel + " " + mode + "\r\n");
 
 class Response
@@ -77,6 +76,11 @@ class Response
 		static void ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel );
 		static void RPL_KICK( Client *client, Channel *channel, const std::string &nickname );
 		static void ERR_USERNOTINCHANNEL( Client *client, const std::string &channel, const std::string &nickname );
+
+		// MODE
+		static void ERR_UMODEUNKNOWNFLAG( Client *client );
+		static void RPL_CHANNELMODEIS( Client *client, Channel *channel );
+		static void ERR_KEYSET( Client *client, const std::string &channel );
 };
 
 #endif
