@@ -111,3 +111,4 @@ void Response::RPL_CHANNELMODEIS( Client *client, Channel *channel )
 	ircMessage(client, ":localhost 324 " + client->getNick() + " #" + channel->getName() + " " + channel->getMode() + "\r\n");
 }
 void Response::ERR_KEYSET( Client *client, const std::string &channel ) { numericReply(client, "467", strtov(1, channel.c_str()), "Channel key already set"); }
+void Response::ERR_UNKNOWNMODE( Client *client, char c, const std::string &channel ) { numericReply(client, "472", strtov(2, std::string(1, c).c_str(), channel.c_str()), "is unknown mode char to me for " + channel); }

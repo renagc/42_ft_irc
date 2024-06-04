@@ -369,29 +369,33 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 
 	if (!it->second.isOperator(client))
 		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
-	unsigned long params = 2;
+	unsigned long initial_params = 3;
+	unsigned long params = 3;
 	for (unsigned long i = 2; i < cmd.size(); i++)
 	{
-		if (params > i && cmd.size() < params + 1)
-			i = params + 1;
 		if (cmd[i].at(0) != '+' && cmd[i].at(0) != '-')
 			return Response::ERR_UMODEUNKNOWNFLAG(client);
 		bool signal = cmd[i].at(0) == '+';
 		for (unsigned long j = 1; j < cmd[i].size(); j++)
 		{
-			if (cmd[i][j] == 'i' && it->second.getI() != signal)
+			if (cmd[i][j] == 'i')
 			{
-				it->second.setI(signal);
-				Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "i\r\n");
+				if (it->second.getI() != signal)
+				{
+					it->second.setI(signal);
+					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "i\r\n");
+				}
 			}
-			else if (cmd[i][j] == 't' && it->second.getT() == !signal)
+			else if (cmd[i][j] == 't')
 			{
-				it->second.setT(signal);
-				Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "t\r\n");
+				if (it->second.getT() == !signal)
+				{
+					it->second.setT(signal);
+					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "t\r\n");
+				}
 			}
 			else if (cmd[i][j] == 'k')
 			{
-				params++;
 				if (params >= cmd.size())
 					Response::ERR_NEEDMOREPARAMS(client, "MODE");
 				else if (it->second.getK())
@@ -411,51 +415,89 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 					it->second.setPw(cmd[params]);
 					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
 				}
-				if (j + 1 == cmd[i].size() && cmd.size() > params)
-					i = params;
+				params++;
 			}
-			// else if (cmd[i][j] == 'l')
-			// {
-			// 	it->second.setL(signal);
-			// 	if (cmd.size() > 3)
-			// 	{
-			// 		for (int j = 0; cmd[3][j]; j++)
-			// 		{
-			// 			if (!isdigit(cmd[3][j]))
-			// 				return Response::ERR_NEEDMOREPARAMS(client, "MODE");
-			// 		}
-			// 		it->second.setLimit(atoi(cmd[3].c_str()));
-			// 	}
-			// 	else
-			// 		return Response::ERR_NEEDMOREPARAMS(client, "MODE");
-			// }
-			// else if (cmd[i][j] == 'o')
-			// {
-			// 	if (cmd.size() > 3)
-			// 	{
-			// 		std::vector<Client *> clients = it->second.getClients();
-			// 		for (unsigned long i = 0; i < clients.size(); i++)
-			// 		{
-			// 			if (!clients[i]->getNick().compare(cmd[3]))
-			// 			{
-			// 				it->second.addOperator(clients[i]);
-			// 				return Response::RPL_CHANNELMODEIS(client, it->second.getName(), "+o");
-			// 			}
-			// 		}
-			// 		if (it->second.isOperator(client))
-			// 			return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
-			// 		else
-			// 		{
-			// 			it->second.addOperator(client);
-			// 			return Response::RPL_CHANNELMODEIS(client, it->second.getName(), "+o");
-			// 		}
-			// 	}
-			// 	else
-			// 		return Response::ERR_NEEDMOREPARAMS(client, "MODE");
-			// }
-			// else
-			// 	return Response::ERR_UMODEUNKNOWNFLAG(client);
+			else if (cmd[i][j] == 'l')
+			{
+				if (it->second.getL() && !signal)
+				{
+					it->second.setL(signal);
+					it->second.setLimit(-1);
+					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "l\r\n");
+				}
+				else if (signal)
+				{
+					if (params >= cmd.size())
+						Response::ERR_NEEDMOREPARAMS(client, "MODE");
+					else
+					{
+						unsigned long k = 0;
+						for (; k < cmd[params].size(); k++)
+						{
+							if (!std::isdigit(cmd[params][k]))
+								break ;
+						}
+						if (k != cmd[params].size())
+							Response::ERR_NEEDMOREPARAMS(client, "MODE");
+						else if (atoi(cmd[params].c_str()) > 0 && atoi(cmd[params].c_str()) != it->second.getLimit())
+						{
+							it->second.setL(signal);
+							it->second.setLimit(atoi(cmd[params].c_str()));
+							Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "l " + cmd[params] + "\r\n");
+						}
+					}
+					params++;
+				}
+			}
+			else if (cmd[i][j] == 'o')
+			{
+				if (params >= cmd.size())
+					Response::ERR_NEEDMOREPARAMS(client, "MODE");
+				else
+				{
+					Client *op = NULL;
+					std::vector<Client *> clients = it->second.getClients();
+					for (unsigned long i = 0; i < clients.size(); i++)
+					{
+						if (!clients[i]->getNick().compare(cmd[params]))
+						{
+							op = clients[i];
+							break ;
+						}
+					}
+					if (op == NULL)
+						Response::ERR_NEEDMOREPARAMS(client, "MODE");
+					else
+					{
+						if (signal)
+						{
+							if (!it->second.isOperator(op))
+							{
+								it->second.addOperator(op);
+								Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "o " + cmd[params] + "\r\n");
+							}
+						}
+						else
+						{
+							if (it->second.isOperator(op))
+							{
+								it->second.removeOperator(op);
+								Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "o " + cmd[params] + "\r\n");
+							}
+						}
+					}
+				}
+			}
+			else
+				Response::ERR_UNKNOWNMODE(client, cmd[i][j], it->second.getName());
 		}
+		if (initial_params != params)
+		{
+			initial_params = params;
+			i = params - 1;
+		}
+		initial_params++;
+		params++;
 	}
 }
 

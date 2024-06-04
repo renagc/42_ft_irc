@@ -81,6 +81,7 @@ class Response
 		static void ERR_UMODEUNKNOWNFLAG( Client *client );
 		static void RPL_CHANNELMODEIS( Client *client, Channel *channel );
 		static void ERR_KEYSET( Client *client, const std::string &channel );
+		static void ERR_UNKNOWNMODE( Client *client, char c, const std::string &channel );
 };
 
 #endif
