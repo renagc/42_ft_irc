@@ -475,6 +475,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 							{
 								it->second.addOperator(op);
 								Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "o " + cmd[params] + "\r\n");
+								Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "o " + cmd[params] + "\r\n");
 							}
 						}
 						else
@@ -483,6 +484,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 							{
 								it->second.removeOperator(op);
 								Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "o " + cmd[params] + "\r\n");
+								Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "o " + cmd[params] + "\r\n");
 							}
 						}
 					}
