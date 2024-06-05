@@ -12,21 +12,6 @@
 # include "Client.hpp"
 # include "Server.hpp"
 
-# define USER(nick, user, host) (nick + "!~" + user + "@" + host)
-
-// PING
-# define RPL_PONG(nick, user, token) (":" + nick + "!" + user + "@localhost PONG " + token + "\r\n")
-# define RPL_NOTICE(nick, user, target, message) (":" + nick + "!" + user + "@localhost NOTICE " + target + " " + message + "\r\n")
-
-// Invalid command
-# define ERR_UNKNOWNCOMMAND(nick, command) (":localhost 421 " + nick + " " + command + " :Unknown command" + "\r\n");
-
-// CHANNEL MESSAGE
-# define RPL_CHANNEL(nick, user, host, channel, message) (":" + USER(nick, user, host) + " PRIVMSG #" + channel + " :" + message + "\r\n");
-
-// MODE
-# define RPL_MODEL(nick, user, host, channel, mode) (":" + USER(nick, user, host) + " MODE #" + channel + " " + mode + "\r\n");
-
 class Response
 {
 	public:
@@ -85,7 +70,11 @@ class Response
 
 		// PRIVMSG
 		static void ERR_CANNOTSENDTOCHAN( Client *client, const std::string &channel );
-		static void RPL_PRIVMSG( Client *client, const std::string &channel, const std::string &message );
+
+		// UNKNOWN COMMAND
+		static void ERR_UNKNOWNCOMMAND( Client *client, const std::string &command );
+
+		static void ERR_PASSWDMISMATCH( Client *client );
 };
 
 #endif

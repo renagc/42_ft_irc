@@ -8,22 +8,24 @@ Server::Server(std::string port, std::string pw) : _port(port)
 		throw std::runtime_error("server port error");
 	if (pw.length() < 2)
 		throw std::runtime_error("server weak password");
+	else
+		_password = pw;
 
-	struct addrinfo		hints;
-	int					status;
+	struct addrinfo hints;
+	int status;
 
 	// Address configuration
 	std::memset(&hints, 0, sizeof(hints)); // Initialize hints to all zeroes
-	hints.ai_flags = AI_PASSIVE; // Fill my ip
-	hints.ai_family = AF_UNSPEC; // Allow IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM; // Use TCP socket
+	hints.ai_flags = AI_PASSIVE;		   // Fill my ip
+	hints.ai_family = AF_UNSPEC;		   // Allow IPv4 or IPv6
+	hints.ai_socktype = SOCK_STREAM;	   // Use TCP socket
 
 	status = getaddrinfo(NULL, (this->_port).c_str(), &hints, &(this->_servinfo));
 	if (status != 0)
 		throw std::runtime_error(gai_strerror(status));
-	
+
 	// Create a socket
-	int		yes=1;
+	int yes = 1;
 
 	_sockfd = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
 	if (_sockfd == -1)
@@ -32,7 +34,7 @@ Server::Server(std::string port, std::string pw) : _port(port)
 		throw std::runtime_error("socketopt");
 
 	// Bind the socket
-	struct addrinfo		*p;
+	struct addrinfo *p;
 
 	for (p = _servinfo; p != NULL; p = p->ai_next)
 	{
@@ -40,9 +42,9 @@ Server::Server(std::string port, std::string pw) : _port(port)
 		{
 			if (bind(_sockfd, p->ai_addr, p->ai_addrlen) == -1)
 				throw std::runtime_error("server: bind failed");
-			break ;
+			break;
 		}
-		catch(const std::exception& e)
+		catch (const std::exception &e)
 		{
 			close(_sockfd);
 			std::cerr << e.what() << '\n';
@@ -62,19 +64,20 @@ Server::~Server()
 	std::cout << "destructor called" << std::endl;
 }
 
-void Server::startListen( void )
+void Server::startListen(void)
 {
 	freeaddrinfo(_servinfo);
-	
-	try {
+
+	try
+	{
 		if (listen(_sockfd, 10) == -1)
 			throw std::runtime_error("server: listen error");
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		std::cerr << e.what() << '\n';
 	}
-	
+
 	struct pollfd listener;
 
 	listener.fd = _sockfd;
@@ -83,30 +86,34 @@ void Server::startListen( void )
 	LOG(std::string("server is listening on localhost:").append(_port));
 
 	// Poll loop for server to listen for incoming data from/to clients
-	while(1)
+	while (1)
 	{
-        if (poll(&_pfds[0], _pfds.size(), -1) == -1)
+		if (poll(&_pfds[0], _pfds.size(), -1) == -1)
 			throw std::runtime_error("poll failed");
 
-        // Run through the existing connections
-        for(unsigned long i = 0; i < _pfds.size(); i++) {
-            if (_pfds[i].revents && POLLIN)
+		// Run through the existing connections
+		for (unsigned long i = 0; i < _pfds.size(); i++)
+		{
+			if (_pfds[i].revents && POLLIN)
 			{
-                if (_pfds[i].fd == _sockfd) // If listener is ready to read, handle new connection
+				if (_pfds[i].fd == _sockfd) // If listener is ready to read, handle new connection
 					this->clientConnection();
 				else
-					this->knownConnection( i );
-            }
-        }
-    }
+				{
+					log("known connection");
+					this->knownConnection(i);
+				}
+			}
+		}
+	}
 }
 
-void Server::clientConnection( void )
+void Server::clientConnection(void)
 {
-	pollfd						temp;
-	socklen_t					sin_size;
-	struct sockaddr_storage		their_addr; // connector's address information
-	
+	pollfd temp;
+	socklen_t sin_size;
+	struct sockaddr_storage their_addr; // connector's address information
+
 	sin_size = sizeof(their_addr);
 	temp.fd = accept(_sockfd, reinterpret_cast<sockaddr *>(&their_addr), &sin_size);
 	if (temp.fd == -1)
@@ -116,16 +123,16 @@ void Server::clientConnection( void )
 	temp.revents = 0;
 	_pfds.push_back(temp);
 
-	std::map<int, Client>::iterator	it = _clients.find(temp.fd);
+	std::map<int, Client>::iterator it = _clients.find(temp.fd);
 	if (it != _clients.end())
-		return ;
+		return;
 	fcntl(temp.fd, F_SETFL, O_NONBLOCK);
-	Client	new_client( temp.fd, getNextClientId(), std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
-	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
+	Client new_client(temp.fd, getNextClientId(), std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
+	_clients.insert(std::pair<int, Client>(temp.fd, new_client));
 	log(std::string("client logging in"), new_client.getId());
 }
 
-Client *Server::findClientByFd( int fd )
+Client *Server::findClientByFd(int fd)
 {
 	Client *client = NULL;
 	std::map<int, Client>::iterator it_client = _clients.find(fd);
@@ -135,7 +142,7 @@ Client *Server::findClientByFd( int fd )
 }
 
 // this function removes a client from the server and their channels
-void Server::clientDisconnect( Client *client )
+void Server::clientDisconnect(Client *client)
 {
 	// loop channels to remove client from all channels
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
@@ -154,30 +161,28 @@ void Server::clientDisconnect( Client *client )
 	for (it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (&it->second == client)
-			break ;
+			break;
 	}
 
 	// loop pfds to stop from poll
 	unsigned long i = 0;
 	for (; i < _pfds.size(); i++)
 	{
-		if(_pfds[i].fd == client->getFd())
-			break ;
+		if (_pfds[i].fd == client->getFd())
+			break;
 	}
 
 	_pfds.erase(_pfds.begin() + i);
 	_clients.erase(it);
 }
 
-
-void Server::createChannel( const std::string &name, Client *admin )
+void Server::createChannel(const std::string &name, Client *admin)
 {
-	Channel	newchannel(name, admin);
+	Channel newchannel(name, admin);
 	newchannel.setId(getNextChannelId());
 	_channels.insert(std::pair<std::string, Channel>(name, newchannel));
 	log("channel created", newchannel.getId());
 }
-
 
 // void Server::handleDataSender( const std::string &msg, Client *sender )
 // {
@@ -207,14 +212,14 @@ void Server::createChannel( const std::string &name, Client *admin )
 // 	}
 // }
 
-void Server::knownConnection( int id )
+void Server::knownConnection(int id)
 {
-	char			buf[256];
-	int				sender_fd = _pfds[id].fd;
-	size_t			nbytes = recv(sender_fd, buf, sizeof(buf), 0);
-	Client			*client = findClientByFd(sender_fd);
+	char buf[256];
+	int sender_fd = _pfds[id].fd;
+	size_t nbytes = recv(sender_fd, buf, sizeof(buf), 0);
+	Client *client = findClientByFd(sender_fd);
 
-	std::string		msg;
+	std::string msg;
 	if (nbytes <= 0) // Got error or connection closed by client
 	{
 		if (nbytes == 0)
@@ -231,7 +236,7 @@ void Server::knownConnection( int id )
 		{
 			nbytes = recv(sender_fd, buf, sizeof(buf), 0);
 			if (nbytes == std::string::npos)
-				continue ;
+				continue;
 			msg.append(buf, nbytes);
 			nc_flag = true;
 		}
@@ -246,34 +251,42 @@ void Server::knownConnection( int id )
 		for (it = parse.begin(); it != parse.end(); it++)
 		{
 			std::vector<std::string> cmd = split(*it, " ");
-			try {
+			try
+			{
+				// if (!cmd[0].compare("PASS") && !client->getRegistered())
+				// {
+				// 	if (!cmd[1].compare(_password))
+				// 		client->setRegistered(true);
+				// 	else
+				// 		return clientDisconnect(client);
+				// }
+				// else
 				_parsing->chooseParsing(client, cmd);
 			}
-			catch(const std::string& e) {
-				// log(std::string("message sent from server: ").append(e));
+			catch (const std::string &e)
+			{
 				if (send(client->getFd(), e.c_str(), e.size(), 0) == -1)
 					log("send problem");
 			}
 		}
 	}
-	
 }
 
 // commands functions
-Client *Server::getClient( const std::string &nickname )
+Client *Server::getClient(const std::string &nickname)
 {
 	std::map<int, Client>::iterator it;
 	for (it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (it->second.getNick() == nickname)
-			break ;
+			break;
 	}
 	if (it == _clients.end())
 		return (NULL);
 	return (&it->second);
 }
 
-void Server::debug( void )
+void Server::debug(void)
 {
 	log("debugging users:");
 	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); it++)
@@ -283,19 +296,21 @@ void Server::debug( void )
 		it->second.printPrivate();
 }
 
-std::map<int, Client> &Server::getClients( void ) { return(_clients); }
-std::map<std::string, Channel> &Server::getChannels( void ) { return(_channels); }
+std::map<int, Client> &Server::getClients(void) { return (_clients); }
+std::map<std::string, Channel> &Server::getChannels(void) { return (_channels); }
 
-int Server::getNextClientId( void )
+int Server::getNextClientId(void)
 {
 	if (_clients.empty())
-		return(0);
-	return(_clients.rbegin()->second.getId() + 1);
+		return (0);
+	return (_clients.rbegin()->second.getId() + 1);
 }
 
-int Server::getNextChannelId( void )
+int Server::getNextChannelId(void)
 {
 	if (_channels.empty())
-		return(0);
-	return(_channels.rbegin()->second.getId() + 1);
+		return (0);
+	return (_channels.rbegin()->second.getId() + 1);
 }
+
+const std::string &Server::getPassword(void) const { return (_password); }

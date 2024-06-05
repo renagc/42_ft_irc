@@ -20,6 +20,7 @@ class Client
 		std::string		_host;
 		bool			_logged;
 		bool			_registered;
+		bool			_registered_pass;
 		
 	public:
 		/* Constructor*/
@@ -33,8 +34,9 @@ class Client
 		const std::string			&getNick( void ) const;
 		Channel						*getCurrChannel( void ) const;
 		const std::string			&getHost( void ) const;
-		const bool					&getLogged( void ) const;
-		const bool					&getRegistered( void ) const;
+		bool						getLogged( void ) const;
+		bool						getRegistered( void ) const;
+		bool						getRegisteredPass( void ) const;
 		const std::string			&getRealName( void ) const;
 		
 		/* set funcs */
@@ -44,6 +46,7 @@ class Client
 		void						setLogged( bool logged );
 		void						setRegistered( bool registered );
 		void						setRealName( const std::string &real_name );
+		void						setRegisteredPass( bool registered_pass );
 
 		/* logs */
 		void						printPrivate( void ) const;

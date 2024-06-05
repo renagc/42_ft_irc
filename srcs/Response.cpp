@@ -85,7 +85,10 @@ void Response::RPL_JOIN( Client *client, Channel *channel )
 	broadcastChannel(client, channel, "JOIN #" + channel->getName() + "\r\n");
 }
 
-void Response::RPL_TOPIC( Client *client, const std::string &channel, const std::string &topic ) { Response::message(client, "TOPIC #" + channel + " :" + topic + "\r\n"); }
+void Response::RPL_TOPIC( Client *client, const std::string &channel, const std::string &topic )
+{
+	Response::ircMessage(client, ":localhost 332 " + client->getNick() + " #" + channel + " :" + topic + "\r\n");
+}
 void Response::RPL_NAMREPLY( Client *client, const std::string &channel, const std::string &users )
 {
 	std::string new_channel = "#" + channel;
@@ -128,3 +131,8 @@ void Response::RPL_INVITING( Client *client, const std::string &nickname, const 
 
 // PRIVMSG
 void Response::ERR_CANNOTSENDTOCHAN( Client *client, const std::string &channel ) { numericReply(client, "404", strtov(1, channel.c_str()), "Cannot send to channel"); }
+
+// UNKNOWN COMMAND
+void Response::ERR_UNKNOWNCOMMAND( Client *client, const std::string &command ) { numericReply(client, "421", strtov(1, command.c_str()), "Unknown command"); }
+
+void Response::ERR_PASSWDMISMATCH( Client *client ) { numericReply(client, "464", std::vector<std::string>(), "Password incorrect"); }

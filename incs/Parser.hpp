@@ -55,6 +55,7 @@ class Parser
 		void								whoCommand( Client *client, const std::string &mask, const std::string &o );
 		void								quitCommand( Client *client, const std::string &message );
 		void								inviteCommand( Client *client, const std::vector<std::string> &cmd );
+		void								passCommand( Client *client, const std::vector<std::string> &cmd );
 
 		
 };

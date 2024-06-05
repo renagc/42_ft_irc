@@ -11,7 +11,7 @@ Parser::~Parser() {}
 void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 {
 	if (cmd.size() < 1)
-		throw "Invalid command (more parameters needed)";
+		return Response::ERR_UNKNOWNCOMMAND(client, cmd[0]);
 	if (!cmd[0].compare("CAP"))
 	{
 		if (!cmd[1].compare("LS"))
@@ -19,6 +19,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 		else if (!cmd[1].compare("REQ") || !cmd[1].compare("END"))
 			return Response::ircMessage(client, ":localhost CAP * ACK :multi-prefix sasl\r\n");
 	}
+	else if (!cmd[0].compare("PASS"))
+		return passCommand(client, cmd);
 	else if (!cmd[0].compare("NICK"))
 		return (nickCommand(client, cmd[1]));
 	else if (!cmd[0].compare("USER"))
@@ -45,7 +47,30 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 			return (modeCommand(client, cmd));
 	}
 	else
-		throw ERR_UNKNOWNCOMMAND(client->getNick(), cmd[0]);
+		return Response::ERR_UNKNOWNCOMMAND(client, cmd[0]);
+}
+
+void Parser::passCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	std::string pw;
+
+	if (client->getRegisteredPass())
+	{
+		Response::ERR_ALREADYREGISTERED(client);
+		return ;
+	}
+	if (cmd.size() < 2)
+	{
+		Response::ERR_NEEDMOREPARAMS(client, "PASS");
+		return (_server->clientDisconnect(client));
+	}
+	if (cmd.size() > 2)
+		pw = cmd[cmd.size() - 1];
+	else
+		pw = cmd[1];
+	if (pw.compare(_server->getPassword()))
+		return _server->clientDisconnect(client);
+	client->setRegisteredPass(true);
 }
 
 std::map<int, Client>::iterator Parser::findNick( const std::string &nick )
@@ -63,6 +88,8 @@ void Parser::authenticateChecker( Client *client )
 {
 	if (client->getNick().empty() || client->getUser().empty())
 		return ;
+	if (!client->getRegisteredPass())
+		return _server->clientDisconnect(client);
 	client->setLogged(true);
 	return Response::RPL_WELCOME(client);
 }
@@ -197,7 +224,8 @@ void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 		Channel *final_channel = &_channels->find(&channels[i][1])->second;
 		log("client joined channel", client->getNick(), &channels[i][1]);
 		Response::RPL_JOIN(client, final_channel);
-		Response::RPL_TOPIC(client, final_channel->getName(), final_channel->getTopic());
+		if (!final_channel->getTopic().empty())
+			Response::RPL_TOPIC(client, final_channel->getName(), final_channel->getTopic());
 		Response::RPL_NAMREPLY(client, final_channel->getName(), final_channel->getUsers());
 	}
 }
@@ -411,14 +439,19 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 						Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
 					}
 					else
-						Response::ERR_KEYSET(client, it->second.getName());
+						Response::ERR_KEYSET(client, "#" + it->second.getName());
 				}
 				else
 				{
-					it->second.setK(signal);
-					it->second.setPw(cmd[params]);
-					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
-					Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+					if (cmd[params].find(',') != std::string::npos || cmd[params].find(' ') != std::string::npos || cmd[params].find('\a') != std::string::npos)
+						Response::ERR_NEEDMOREPARAMS(client, "MODE");
+					else
+					{
+						it->second.setK(signal);
+						it->second.setPw(cmd[params]);
+						Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+						Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+					}
 				}
 				params++;
 			}
