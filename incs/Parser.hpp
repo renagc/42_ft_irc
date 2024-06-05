@@ -49,8 +49,8 @@ class Parser
 		// topic command
 		void								topicCommand( Client *client, const std::string &channel_name, const std::string &topic );
 		void								modeCommand( Client *client, const std::vector<std::string> &cmd );
-		void								whoCommand( Client *client, const std::string &mask, const std::string &o );
-
+		void								whoCommand( Client *client, const std::vector<std::string> &cmd );
+		void								passCommand( Client *client, const std::vector<std::string> &cmd );
 		
 };
 

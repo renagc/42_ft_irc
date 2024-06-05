@@ -8,6 +8,8 @@ Server::Server(std::string port, std::string pw) : _port(port)
 		throw std::runtime_error("server port error");
 	if (pw.length() < 2)
 		throw std::runtime_error("server weak password");
+	else
+		_password = pw;
 
 	struct addrinfo		hints;
 	int					status;
@@ -171,34 +173,34 @@ void Server::createChannel( const std::string &name, Client *admin )
 }
 
 
-// void Server::handleDataSender( const std::string &msg, Client *sender )
-// {
-// 	// We got some good data from a client
-// 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
-// 	{
-// 		if (!it->second.findClient(sender))
-// 			continue ;
-// 		for(unsigned long j = 1; j < _pfds.size(); j++)
-// 		{
-// 			// Send to everyone!
-// 			int dest_fd = _pfds[j].fd;
-// 			Client *client = &_clients.find(dest_fd)->second;
+/* void Server::handleDataSender( const std::string &msg, Client *sender )
+{
+	// We got some good data from a client
+	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+	{
+		if (!it->second.findClient(sender))
+			continue ;
+		for(unsigned long j = 1; j < _pfds.size(); j++)
+		{
+			// Send to everyone!
+			int dest_fd = _pfds[j].fd;
+			Client *client = &_clients.find(dest_fd)->second;
 
-// 			// Except the listener and ourselves
-// 			if (	dest_fd != _sockfd && \
-// 					dest_fd != sender->getFd() && \
-// 					it->second.findClient(client))
-// 			{
-// 				if (send(dest_fd, msg.c_str(), msg.size(), 0) == -1)
-// 					perror("send");
-// 				else
-// 					log("data sent", sender->getNick(), client->getNick());
-// 			}
-// 		}
-// 		debug();
-// 	}
-// }
-
+			// Except the listener and ourselves
+			if (	dest_fd != _sockfd && \
+					dest_fd != sender->getFd() && \
+					it->second.findClient(client))
+			{
+				if (send(dest_fd, msg.c_str(), msg.size(), 0) == -1)
+					perror("send");
+				else
+					log("data sent", sender->getNick(), client->getNick());
+			}
+		}
+		debug();
+	}
+}
+ */
 void Server::knownConnection( int id )
 {
 	char			buf[256];
@@ -276,3 +278,5 @@ int Server::getNextChannelId( void )
 		return(0);
 	return(_channels.rbegin()->second.getId() + 1);
 }
+
+std::string Server::getPassword( void ) const { return(_password); }

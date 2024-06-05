@@ -12,6 +12,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 {
 	if (cmd.size() < 1)
 		throw "Invalid command (more parameters needed)";
+	else if (cmd[0].compare("PASS"))
+		return(passCommand(client, cmd));
 	if (!cmd[0].compare("NICK"))
 		return (nickCommand(client, cmd[1]));
 	else if (!cmd[0].compare("USER"))
@@ -28,8 +30,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 		// 	return (kickCommand(client, cmd[1], cmd[2]));
 		else if (!cmd[0].compare("PART"))
 			return (partCommand(client, cmd));
-		// else if (!cmd[0].compare("WHO"))
-		// 	return (whoCommand(client, cmd[1], cmd[2]));
+		else if (!cmd[0].compare("WHO"))
+			return (whoCommand(client, cmd));
 		// else if (!cmd[0].compare("QUIT"))
 		// 	throw RPL_QUIT(client->getNick(), client->getUser(), client->getHost(), joinString(cmd, cmd.begin() + 1));
 		// else if (cmd[0].compare("INVITE"))
@@ -415,20 +417,49 @@ void Parser::partCommand( Client *client, const std::vector<std::string> &cmd )
 // 	}
 // }
 
-// // only works to list client on specific channel
-// void Parser::whoCommand( Client *client, const std::string &mask, const std::string &o )
-// {
-// 	(void)o;
-// 	if (mask.size() > 1 && mask.at(0) == '#')
-// 	{
-// 		std::map<std::string, Channel>::iterator it = _channels->find(&mask[1]);
-// 		if (it != _channels->end())
-// 		{
-// 			std::vector<Client *> clients = it->second.getClients();
-// 			for (unsigned long i = 0; i < clients.size(); i++)
-// 				Response::message(client, "352 " + clients[i]->getNick() + " " + mask + " " + clients[i]->getUser() + " " + clients[i]->getHost() + " " + clients[i]->getNick() + " H :0 ");
-// 			Response::message(client, "315 " + client->getNick() + " " + mask + " :End of /WHO list.");
-// 		}
-// 	}
-// }
+// only works to list client on specific channel
+void Parser::whoCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	(void) client;
+	log("entrei");
+	if (cmd.size() > 1)
+	{
+		std::map<std::string, Channel>::iterator it = _channels->find(cmd[1]);
+		if (it != _channels->end())
+		{
+			std::vector<Client *> clients = it->second.getClients();
+			for (unsigned long i = 0; i < clients.size(); i++)
+				Response::message(client, "352 " + clients[i]->getNick() + " " + cmd[1] + " " + clients[i]->getUser() + " " + clients[i]->getHost() + " " + clients[i]->getNick() + " H :0 ");
+			log("aqui");
+		}
+/* 		else
+		{
+			for (unsigned long i = 0; i < _clients->size(); i++)
+			{
+				if(_clients->find(i)->second.getNick().compare(cmd[1]) ||\
+					_clients->find(i)->second.getUser().compare(cmd[1]) ||\
+					_clients->find(i)->second.getHost().compare(cmd[1]))
+					return Response::message(client, "352 " + _clients->find(i)->second.getNick() + " " + cmd[1] + " " + _clients->find(i)->second.getUser() + " " + _clients->find(i)->second.getHost() + " " + _clients->find(i)->second.getNick() + " H :0 ");
+			}
+		} */
+	}
+	return Response::message(client, "315 " + client->getNick() + " " + cmd[1] + " :End of /WHO list.");
+}
 
+void Parser::passCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	std::string pw;
+
+	if (client->getLogged())
+		return ;
+	if (cmd.size() < 2)
+		Response::ERR_NEEDMOREPARAMS(client, "PASS");
+		return (_server->clientDisconnect(client));
+	if (cmd.size() > 2)
+		pw = cmd[cmd.size() - 1];
+	else
+		pw = cmd[1];
+	if (!pw.compare(_server->getPassword()))
+		Response::ERR_ALREADYREGISTERED(client);
+		return (_server->clientDisconnect(client));
+}

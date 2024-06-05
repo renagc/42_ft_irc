@@ -46,6 +46,7 @@ class Server
 		std::map<std::string, Channel>		_channels;
 		std::vector<std::string>			_commands;
 		Parser								*_parsing;
+		std::string							_password;
 
 		/* debug */
 		void						debug( void );
@@ -80,6 +81,9 @@ class Server
 		// get current id
 		int										getNextClientId( void );
 		int										getNextChannelId( void );
+
+		// get server password
+		std::string								getPassword( void ) const;
 };
 
 # include "Parser.hpp"
