@@ -128,23 +128,6 @@ void Parser::userCommand( Client *client, const std::vector<std::string> &cmd )
 	log(std::string("set user to: ").append(cmd[1]), client->getId());
 }
 
-/*
-
-	ERR_NEEDMOREPARAMS -- done
-	ERR_INVITEONLYCHAN -- done
-	ERR_CHANNELISFULL -- done
-	ERR_NOSUCHCHANNEL
-	ERR_TOOMANYTARGETS
-	RPL_TOPIC
-
-	ERR_BANNEDFROMCHAN
-	ERR_BADCHANNELKEY
-	ERR_BADCHANMASK
-	ERR_TOOMANYCHANNELS
-	ERR_UNAVAILRESOURCE
-
-*/
-
 // JOIN #channel need to implement all the error messages
 void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 {
@@ -240,7 +223,7 @@ void Parser::kickCommand( Client *client, const std::vector<std::string> &cmd )
 		}
 		if (!(*it).second.isOperator(client))
 		{
-			Response::ERR_CHANOPRIVSNEEDED(client, &channels[i][1]);
+			Response::ERR_CHANOPRIVSNEEDED(client, channels[i]);
 			continue ;
 		}
 		if (users.size() < i + 1) // sem user
@@ -368,7 +351,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 		return Response::RPL_CHANNELMODEIS(client, &it->second);
 
 	if (!it->second.isOperator(client))
-		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
+		return Response::ERR_CHANOPRIVSNEEDED(client, "#" + it->second.getName());
 	unsigned long initial_params = 3;
 	unsigned long params = 3;
 	for (unsigned long i = 2; i < cmd.size(); i++)
@@ -520,7 +503,7 @@ void Parser::inviteCommand( Client *client, const std::vector<std::string> &cmd 
 		return Response::ERR_NOSUCHCHANNEL(client, &cmd[2][1]);
 
 	if (!it->second.isOperator(client))
-		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
+		return Response::ERR_CHANOPRIVSNEEDED(client, "#" + it->second.getName());
 
 	std::vector<Client *> clients = it->second.getClients();
 	unsigned long i = 0;
@@ -587,5 +570,5 @@ void	Parser::topicCommand( Client *client, const std::vector<std::string> &cmd )
 		}
 	}
 	else
-		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
+		return Response::ERR_CHANOPRIVSNEEDED(client, "#" + it->second.getName());
 }

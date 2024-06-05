@@ -97,11 +97,7 @@ void Response::ERR_BANNEDFROMCHAN( Client *client, const std::string &channel ) 
 void Response::RPL_QUIT( Client *client, Channel *channel, const std::string &message ) { Response::broadcastChannel(client, channel, "QUIT :" + message + "\r\n"); }
 
 // KICK
-void Response::ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel )
-{
-	std::string msg = "#" + channel;
-	numericReply(client, "482", strtov(1, msg.c_str()), "You're not channel operator");
-}
+void Response::ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel ) { numericReply(client, "482", strtov(1, msg.c_str()), "You're not channel operator"); }
 void Response::RPL_KICK( Client *client, Channel *channel, const std::string &nickname )
 {
 	Response::broadcastChannel(client, channel, "KICK #" + channel->getName() + " " + nickname + "\r\n");
