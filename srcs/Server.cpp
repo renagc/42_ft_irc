@@ -137,7 +137,12 @@ void Server::clientDisconnect( Client *client )
 {
 	// loop channels to remove client from all channels
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+	{
 		it->second.removeClient(client);
+		it->second.removeKicked(client);
+		it->second.removeOperator(client);
+		it->second.removeInvited(client);
+	}
 
 	// close client fd
 	close(client->getFd());

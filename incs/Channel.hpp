@@ -17,6 +17,7 @@ class Channel
 		std::string				_name;
 		std::vector<Client *>	_clients;
 		std::vector<Client *>	_clients_kicked;
+		std::vector<Client *>	_invited;
 		std::string				_pw;
 		int						_limit;
 		std::string				_topic;
@@ -63,7 +64,10 @@ class Channel
 		void							setPw( const std::string &pw );
 		void							addOperator( Client *client );
 		void							addKicked( Client *client );
+		void							addInvited( Client *client );
 		void							removeOperator( Client *client );
+		void							removeKicked( Client *client );
+		void							removeInvited( Client *client );
 
 		bool							findClient( Client *client ) const;
 		void							removeClient( Client *client );
@@ -71,8 +75,10 @@ class Channel
 		/* debug funcs */
 		void							printClients( void ) const;
 		void							printPrivate( void ) const;
+		
 		bool							isOperator(Client *client);
 		bool							isKicked(Client *client);
+		bool							isInvited( Client *client ) const;
 };
 
 #endif

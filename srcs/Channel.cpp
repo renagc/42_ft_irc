@@ -44,6 +44,16 @@ bool	Channel::findClient( Client *client ) const
 	return (false);
 }
 
+bool Channel::isInvited( Client *client ) const
+{
+	for (unsigned long i = 0; i < _invited.size(); i++)
+	{
+		if (_invited[i] == client)
+			return (true);
+	}
+	return (false);
+}
+
 void Channel::printClients( void ) const {
 	for (unsigned long i = 0; i < _clients.size(); i++)
 	{
@@ -98,6 +108,40 @@ void Channel::addOperator( Client *client )
 	_operators.push_back(client);
 }
 void Channel::addKicked( Client *client ) { _clients_kicked.push_back(client); }
+
+void Channel::removeKicked( Client *client )
+{
+	std::vector<Client *>::iterator it;
+	for (it = _clients_kicked.begin(); it != _clients_kicked.end(); it++)
+	{
+		if (client == *it)
+			break;
+	}
+	if (it != _clients_kicked.end())
+		_clients_kicked.erase(it);
+}
+
+void Channel::removeInvited( Client *client )
+{
+	std::vector<Client *>::iterator it;
+	for (it = _invited.begin(); it != _invited.end(); it++)
+	{
+		if (client == *it)
+			break;
+	}
+	if (it != _invited.end())
+		_invited.erase(it);
+}
+void Channel::addInvited( Client *client )
+{
+	std::vector<Client *>::iterator it = _invited.begin();
+	for (; it != _invited.end(); it++)
+	{
+		if (*it == client)
+			return ;
+	}
+	_invited.push_back(client);
+}
 void Channel::removeOperator( Client *client )
 {
 	std::vector<Client *>::iterator it;

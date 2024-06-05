@@ -116,3 +116,16 @@ void Response::RPL_CHANNELMODEIS( Client *client, Channel *channel )
 }
 void Response::ERR_KEYSET( Client *client, const std::string &channel ) { numericReply(client, "467", strtov(1, channel.c_str()), "Channel key already set"); }
 void Response::ERR_UNKNOWNMODE( Client *client, char c, const std::string &channel ) { numericReply(client, "472", strtov(2, std::string(1, c).c_str(), channel.c_str()), "is unknown mode char to me for " + channel); }
+
+// INVITE
+void Response::ERR_NOSUCHNICK( Client *client, const std::string &nickname ) { numericReply(client, "401", strtov(1, nickname.c_str()), "No such nick/channel"); }
+void Response::ERR_USERONCHANNEL( Client *client, const std::string &nickname, const std::string &channel )
+{
+	std::string msg = "#" + channel;
+	numericReply(client, "443", strtov(2, nickname.c_str(), msg.c_str()), "is already on channel");
+}
+void Response::RPL_INVITING( Client *client, const std::string &nickname, const std::string &channel )
+{
+	std::string msg = "#" + channel;
+	numericReply(client, "341", strtov(3, client->getNick().c_str(), nickname.c_str(), msg.c_str()), "has been invited");
+}

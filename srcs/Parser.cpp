@@ -37,8 +37,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 		// 	return (whoCommand(client, cmd[1], cmd[2]));
 		else if (!cmd[0].compare("QUIT"))
 			return quitCommand(client, cmd[1]);
-		// else if (cmd[0].compare("INVITE"))
-		// 	return (inviteParse(cmd));
+		else if (!cmd[0].compare("INVITE"))
+			return (inviteCommand(client, cmd));
 		else if (!cmd[0].compare("TOPIC"))
 			return (topicCommand(client, cmd));
 		else if (!cmd[0].compare("MODE"))
@@ -186,7 +186,7 @@ void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 		else
 		{
 			Channel *channel = &it->second;
-			if (channel->getI())
+			if (channel->getI() && !channel->isInvited(client))
 			{
 				Response::ERR_INVITEONLYCHAN(client, channel->getName());
 				continue ;
@@ -509,97 +509,45 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 	}
 }
 
-// TODO: adicionar parsing do comentario como argumento ou nao e verificar o mode do channel
-// void Parser::kickCommand( Client *client, const std::string &channel_name, const std::string &username ) 
-// {
-// 	std::map<std::string, Channel>::iterator it = _channels->find(channel_name);
-// 	if (it != _channels->end())
-// 		throw "não encontrou channel";
-// 	std::vector<Client *> clients = (*it).second.getClients();
-// 	for (unsigned long i = 0; i < clients.size(); i++)
-// 	{
-// 		if (clients[i]->getUser() == username)
-// 		{
-// 			(*it).second.removeClient(clients[i]);
-// 			throw RPL_KICK(client->getNick(), client->getUser(), channel_name, username);
-// 		}
-// 	}
-// 	throw "client not found";
-	// std::map<std::string, Channel>::iterator it;
-	// it = _server->_channels.find(token[1]);
-	// if (it != server._channels.end())
-	// {
-	// 	std::vector<Client *> channel_clients;
-		
-	// 	channel_clients = it->second.getClients();
-	// 	for (unsigned long i = 0; i < channel_clients.size(); i++)
-	// 	{
-	// 		if (channel_clients[i] == token[2])
-	// 		{
-	// 			std::vector<Client *> operators;
-	// 			operators = it->second.getOperators();
-	// 			for (unsigned long j = 0; j < operators.size(); j++)
-	// 			{
-	// 				if (operators[i] == client)
-	// 				{
-	// 					it->second.removeClient(channel_clients[i])
+void Parser::inviteCommand( Client *client, const std::vector<std::string> &cmd )
+{
+	if (cmd.size() < 3)
+		return Response::ERR_NEEDMOREPARAMS(client, "INVITE");
+	if (cmd[2][0] != '#')
+		return Response::ERR_NOSUCHCHANNEL(client, cmd[2]);
+	std::map<std::string, Channel>::iterator it = _channels->find(&cmd[2][1]);
+	if (it == _channels->end()) 
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[2][1]);
 
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	command_error;
-	// }
+	if (!it->second.isOperator(client))
+		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
 
-// int Parser::InviteParse(std::vector<std::string> tokens, Client *client, Channel *channel, Server *server)
-// {
-// 	Client	*invited;
-// 	invited = server.getClient(token[1]);
-// 	int	able = 1;
-// 	if (invited != 0)
-// 	{
-// 		std::map<std::string, Channel>::iterator it;
-// 		it = server._channels.find(token[2]);
-// 		if (it != server._channels.end())
-// 		{
-// 			std::vector<Client *> channel_clients;
-		
-// 			channel_clients = it->second.getClients();
-// 			for (unsigned long i = 0; i < channel_clients.size(); i++)
-// 			{
-// 				if (channel_clients[i] == invited)
-// 				{
-// 					already in the channel;
-// 				}
-// 			}
-// 			if (it->second.getT() == true)
-// 			{
-// 				able = 0;
-// 				std::vector<Client *> operators;
-// 				operators = it->second.getOperators();
-// 				for (unsigned long j = 0; j < operators.size(); j++)
-// 				{
-// 					if (operators[i] == client)
-// 					able = 1;
-// 				}
-// 			}
-// 			if (it->second.getLimit() < it->second._clients.size() && able == 1)
-// 			{
-// 				it->second.addClient(invited);
-// 			}
-// 			else
-// 			{
-// 				channel full or not operator;
-// 			}
-// 			}
-// 		}
-// 	}
+	std::vector<Client *> clients = it->second.getClients();
+	unsigned long i = 0;
+	for (; i < clients.size(); i++)
+	{
+		if (clients[i] == client)
+			break ;
+	}
+	if (clients[i] != client)
+		return Response::ERR_NOTONCHANNEL(client, &cmd[2][1]);
 
-// 	else
-// 		user doesnt exist
+	std::map<int, Client>::iterator itc = _clients->begin();
+	for (; itc != _clients->end(); itc++)
+	{
+		if (!itc->second.getNick().compare(cmd[1]))
+			break ;
+	}
+	if (itc == _clients->end())
+		return Response::ERR_NOSUCHNICK(client, cmd[1]);
+	
+	if (it->second.findClient(&itc->second))
+		return Response::ERR_USERONCHANNEL(client, cmd[1], it->second.getName());
 
-
-// }
+	it->second.addInvited(&itc->second);
+	Response::RPL_INVITING(client, itc->second.getNick(), it->second.getName());
+	Response::ircMessage(&itc->second, ":" + Response::userPrefix(&itc->second) + " INVITE " + itc->second.getNick() + " #" + it->second.getName() + "\r\n");
+}
 
 void	Parser::topicCommand( Client *client, const std::vector<std::string> &cmd ) 
 {
@@ -641,100 +589,3 @@ void	Parser::topicCommand( Client *client, const std::vector<std::string> &cmd )
 	else
 		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
 }
-
-// void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd ) 
-// {
-// 	std::string channel_name = cmd[1];
-// 	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
-	
-// 	if (it == _channels->end())
-// 		throw ERR_NOSUCHCHANNEL(client->getNick(), &channel_name[1]);
-
-// 	std::vector<Client *> operators = it->second.getOperators();
-// 	std::vector<Client *>::iterator ito = operators.begin();
-// 	for (;ito != operators.end() ; ito++)
-// 	{
-// 		if (*ito == client)
-// 			break;
-// 	}
-// 	if (ito != operators.end())
-// 	{
-// 		if (cmd.size() < 3)
-// 			return (Response::message(client, "324 " + client->getNick() + " " + channel_name + " -itko"));
-// 		if (!cmd[2].compare("+i"))
-// 			it->second.setI(true);
-// 		else if (!cmd[2].compare("-i"))
-// 			it->second.setI(false);
-// 		else if (!cmd[2].compare("+t"))
-// 			it->second.setT(true);
-// 		else if (!cmd[2].compare("-t"))
-// 			it->second.setT(false);
-// 		else if (!cmd[2].compare("+k"))
-// 		{
-// 			it->second.setK(true);
-// 			if (!cmd[3].empty())
-// 				it->second.setPw(cmd[3]);
-// 			else
-// 				it->second.setPw("");
-// 		}
-// 		else if (!cmd[2].compare("-k"))
-// 		{
-// 			if (!cmd[3].empty() && cmd[3].compare(it->second.getPw()))
-// 			{
-// 				it->second.setK(false);
-// 				it->second.setPw("");
-// 			}
-// 			else
-// 				throw ERR_BADCHANNELKEY(client->getNick(), &channel_name[1]);
-// 		}
-// 		else if (!cmd[2].compare("+o"))
-// 		{
-// 			Client *client = &findNick(cmd[3])->second;
-// 			std::vector<Client *>::iterator it_add_operator = operators.begin();
-// 			for (; it_add_operator != operators.end(); it_add_operator++)
-// 			{
-// 				if (*it_add_operator == client)
-// 					break ;
-// 			}
-// 			if (it_add_operator != operators.end())
-// 				(*it).second.addOperator(client);
-// 		}
-// 		else if (!cmd[2].compare("+l"))
-// 		{
-// 			(*it).second.setL(true);
-// 			if (cmd[3].empty())
-// 				throw ERR_NOSUCHCHANNEL(client->getNick(), &channel_name[1]);
-// 			for (int j = 0; cmd[3][j]; j++)
-// 			{
-// 				if (!isdigit(cmd[3][j]))
-// 					throw ERR_NEEDMOREPARAMS(client->getNick(), "MODE");
-// 			}
-// 			it->second.setLimit(atoi(cmd[3].c_str()));
-// 		}
-// 		else if (!cmd[2].compare("-l"))
-// 			it->second.setL(false);
-// 		else
-// 		{
-// 			DEBUG("foi aqui");
-// 			throw ERR_UMODEUNKNOWNFLAG(client->getNick());
-// 		}
-// 	}
-// }
-
-// // only works to list client on specific channel
-// void Parser::whoCommand( Client *client, const std::string &mask, const std::string &o )
-// {
-// 	(void)o;
-// 	if (mask.size() > 1 && mask.at(0) == '#')
-// 	{
-// 		std::map<std::string, Channel>::iterator it = _channels->find(&mask[1]);
-// 		if (it != _channels->end())
-// 		{
-// 			std::vector<Client *> clients = it->second.getClients();
-// 			for (unsigned long i = 0; i < clients.size(); i++)
-// 				Response::message(client, "352 " + clients[i]->getNick() + " " + mask + " " + clients[i]->getUser() + " " + clients[i]->getHost() + " " + clients[i]->getNick() + " H :0 ");
-// 			Response::message(client, "315 " + client->getNick() + " " + mask + " :End of /WHO list.");
-// 		}
-// 	}
-// }
-
