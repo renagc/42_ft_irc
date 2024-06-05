@@ -126,7 +126,7 @@ void Response::ERR_USERONCHANNEL( Client *client, const std::string &nickname, c
 void Response::RPL_INVITING( Client *client, const std::string &nickname, const std::string &channel )
 {
 	std::string msg = "#" + channel;
-	numericReply(client, "341", strtov(3, client->getNick().c_str(), nickname.c_str(), msg.c_str()), "has been invited");
+	numericReply(client, "341", strtov(2, nickname.c_str(), msg.c_str()), "has been invited");
 }
 
 // PRIVMSG

@@ -580,7 +580,7 @@ void Parser::inviteCommand( Client *client, const std::vector<std::string> &cmd 
 
 	it->second.addInvited(&itc->second);
 	Response::RPL_INVITING(client, itc->second.getNick(), it->second.getName());
-	Response::ircMessage(&itc->second, ":" + Response::userPrefix(&itc->second) + " INVITE " + itc->second.getNick() + " #" + it->second.getName() + "\r\n");
+	Response::ircMessage(&itc->second, ":" + Response::userPrefix(client) + " INVITE " + itc->second.getNick() + " #" + it->second.getName() + "\r\n");
 }
 
 void	Parser::topicCommand( Client *client, const std::vector<std::string> &cmd ) 

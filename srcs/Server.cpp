@@ -99,10 +99,7 @@ void Server::startListen(void)
 				if (_pfds[i].fd == _sockfd) // If listener is ready to read, handle new connection
 					this->clientConnection();
 				else
-				{
-					log("known connection");
 					this->knownConnection(i);
-				}
 			}
 		}
 	}
@@ -248,7 +245,7 @@ void Server::knownConnection(int id)
 		else
 			parse = split(msg, "\r\n");
 		std::vector<std::string>::iterator it;
-		for (it = parse.begin(); it != parse.end(); it++)
+		for (it = parse.begin(); it != parse.end() && findClientByFd(sender_fd); it++)
 		{
 			std::vector<std::string> cmd = split(*it, " ");
 			try
