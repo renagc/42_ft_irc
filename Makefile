@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX := c++
-CXXFLAGS := -std=c++98 -Wall -Wextra -Werror #-fsanitize=address -g
+CXXFLAGS := -std=c++98 -Wall -Wextra -Werror -fsanitize=address -g
 
 # Directories
 SRCDIR := srcs

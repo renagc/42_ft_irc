@@ -39,8 +39,8 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 			return quitCommand(client, cmd[1]);
 		// else if (cmd[0].compare("INVITE"))
 		// 	return (inviteParse(cmd));
-		// else if (!cmd[0].compare("TOPIC"))
-		// 	return (topicCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
+		else if (!cmd[0].compare("TOPIC"))
+			return (topicCommand(client, cmd));
 		else if (!cmd[0].compare("MODE"))
 			return (modeCommand(client, cmd));
 	}
@@ -384,6 +384,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 				{
 					it->second.setI(signal);
 					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "i\r\n");
+					Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "i " + "\r\n");
 				}
 			}
 			else if (cmd[i][j] == 't')
@@ -392,6 +393,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 				{
 					it->second.setT(signal);
 					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "t\r\n");
+					Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "t " + "\r\n");
 				}
 			}
 			else if (cmd[i][j] == 'k')
@@ -405,6 +407,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 						it->second.setK(signal);
 						it->second.setPw("");
 						Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+						Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
 					}
 					else
 						Response::ERR_KEYSET(client, it->second.getName());
@@ -414,6 +417,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 					it->second.setK(signal);
 					it->second.setPw(cmd[params]);
 					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
+					Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "k " + cmd[params] + "\r\n");
 				}
 				params++;
 			}
@@ -424,6 +428,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 					it->second.setL(signal);
 					it->second.setLimit(-1);
 					Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "l\r\n");
+					Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "l " + "\r\n");
 				}
 				else if (signal)
 				{
@@ -444,6 +449,7 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 							it->second.setL(signal);
 							it->second.setLimit(atoi(cmd[params].c_str()));
 							Response::message(client, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "l " + cmd[params] + "\r\n");
+							Response::broadcastChannel(client, &it->second, "MODE #" + it->second.getName() + " " + cmd[i].at(0) + "l " + cmd[params] + "\r\n");
 						}
 					}
 					params++;
@@ -595,35 +601,46 @@ void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd )
 
 // }
 
-// void	Parser::topicCommand( Client *client, const std::string &channel_name, const std::string &topic ) 
-// {
-// 	std::map<std::string, Channel>::iterator it;
-// 	it = _channels->find(&channel_name[1]);
-// 	int	able = true;
-// 	if (it != _channels->end())
-// 	{
-// 		if (it->second.getT())
-// 		{
-// 			able = false;
-// 			std::vector<Client *> operators;
-// 			operators = it->second.getOperators();
-// 			for (unsigned long j = 0; j < operators.size(); j++)
-// 			{
-// 				if (operators[j] == client)
-// 					able = true;
-// 			}
-// 		}
-// 		if (able)
-// 		{
-// 			if (!topic.empty() && topic.at(0) == ':' && topic.size() > 1)
-// 				(*it).second.setTopic(&topic[1]);
-// 			else if (!topic.empty() && topic.at(0) == ':')
-// 				(*it).second.setTopic("");
-// 		}
-// 		throw RPL_TOPIC(client->getNick(), client->getUser(), client->getHost(), &channel_name[1], (*it).second.getTopic());
-// 	}
-// 	throw ERR_NOSUCHCHANNEL(client->getNick(), &channel_name[1]);
-// }
+void	Parser::topicCommand( Client *client, const std::vector<std::string> &cmd ) 
+{
+	if (cmd.size() < 2)
+		return Response::ERR_NEEDMOREPARAMS(client, "TOPIC");
+	if (cmd[1].at(0) != '#')
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+	
+	std::map<std::string, Channel>::iterator it;
+	it = _channels->find(&cmd[1][1]);
+	if (it == _channels->end())
+		return Response::ERR_NOSUCHCHANNEL(client, &cmd[1][1]);
+	
+	std::vector<Client *> clients = it->second.getClients();
+	unsigned long i = 0;
+	for (; i < clients.size(); i++)
+	{
+		if (clients[i] == client)
+			break ;
+	}
+	if (clients[i] != client)
+		return Response::ERR_NOTONCHANNEL(client, &cmd[1][1]);
+	if (!it->second.getT() || (it->second.getT() && it->second.isOperator(client)))
+	{
+		if (cmd.size() < 3 && it->second.getTopic().empty())
+			return Response::message(client, "331 " + client->getNick() + " #" + it->second.getName() + " :No topic is set\r\n");
+		else if (cmd.size() < 3 && !it->second.getTopic().empty())
+			return Response::message(client, "332 " + client->getNick() + " #" + it->second.getName() + " :" + it->second.getTopic() + "\r\n");
+		else
+		{
+			if (cmd[2].at(0) == ':')
+				it->second.setTopic(&joinString(cmd, cmd.begin() + 2)[1]);
+			else
+				it->second.setTopic(joinString(cmd, cmd.begin() + 2));
+			Response::message(client, "TOPIC #" + it->second.getName() + " :" + it->second.getTopic() + "\r\n");
+			return Response::broadcastChannel(client, &it->second, "TOPIC #" + it->second.getName() + " :" + it->second.getTopic() + "\r\n");
+		}
+	}
+	else
+		return Response::ERR_CHANOPRIVSNEEDED(client, it->second.getName());
+}
 
 // void Parser::modeCommand( Client *client, const std::vector<std::string> &cmd ) 
 // {
