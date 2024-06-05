@@ -28,7 +28,7 @@ void Parser::chooseParsing( Client *client, std::vector<std::string> cmd )
 		if (!cmd[0].compare("JOIN"))
 			return (joinCommand(client, cmd));
 		else if (!cmd[0].compare("PRIVMSG"))
-			return (privmsgCommand(client, cmd[1], joinString(cmd, cmd.begin() + 2)));
+			return (privmsgCommand(client, cmd));
 		else if (!cmd[0].compare("KICK"))
 			return (kickCommand(client, cmd));
 		else if (!cmd[0].compare("PART"))
@@ -174,7 +174,7 @@ void Parser::joinCommand( Client *client, const std::vector<std::string> &cmd )
 				Response::ERR_INVITEONLYCHAN(client, channel->getName());
 				continue ;
 			}
-			else if (channel->getL() && channel->getLimit() < (int)channel->getClients().size())
+			else if (channel->getL() && channel->getLimit() == (int)channel->getClients().size())
 			{
 				Response::ERR_CHANNELISFULL(client, channel->getName());
 				continue ;
@@ -267,26 +267,44 @@ void Parser::quitCommand( Client *client, const std::string &message )
 }
 
 // TODO: verificar o parsing do target
-void Parser::privmsgCommand( Client *client, const std::string &channel_name, const std::string &message )
+void Parser::privmsgCommand( Client *client, const std::vector<std::string> &cmd )
 {
-	log(message);
-	if (channel_name.empty() || message.empty())
-	{
-		log(std::string("no channel_name or message given"));
+	if (cmd.size() < 3)
 		return Response::ERR_NEEDMOREPARAMS(client, "PRIVMSG");
-	}
-	std::map<std::string, Channel>::iterator it = _channels->find(&channel_name[1]);
-	if (it != _channels->end())
+	if (cmd[2].at(0) != ':')
+		return Response::ERR_NEEDMOREPARAMS(client, "PRIVMSG");
+	std::string msg = &joinString(cmd, cmd.begin() + 2)[1];
+
+	std::vector<std::string> targets = split(cmd[1], ",");
+	printVector(targets);
+	unsigned long i = 0;
+	for (; i < targets.size(); i++)
 	{
-		std::vector<Client *> clients = (*it).second.getClients();
-		std::string msg = RPL_CHANNEL(client->getNick(), client->getUser(),client->getHost(), &channel_name[1], &message[1]);
-		for (std::vector<Client *>::iterator it = clients.begin(); it != clients.end(); it++)
+		if (targets[i].at(0) == '#')
 		{
-			if (client->getFd() != (*it)->getFd() && send((*it)->getFd(), msg.c_str(), msg.size(), 0) == -1)
-				log(std::string("send problem"));
+			std::map<std::string, Channel>::iterator it = _channels->find(&targets[i][1]);
+			if (it == _channels->end())
+				Response::ERR_NOSUCHCHANNEL(client, &targets[i][1]);
+			else if (!(*it).second.findClient(client))
+				Response::ERR_CANNOTSENDTOCHAN(client, targets[i]);
+			else
+				Response::broadcastChannel(client, &it->second, "PRIVMSG #" + it->second.getName() + " " + msg + "\r\n");
 		}
+		else
+		{
+			std::map<int, Client>::iterator itc = _clients->begin();
+			for (; itc != _clients->end(); itc++)
+			{
+				if (!itc->second.getNick().compare(targets[i]))
+					break ;
+			}
+			if (itc == _clients->end())
+				Response::ERR_NOSUCHNICK(client, targets[i]);
+			else
+				Response::ircMessage(&itc->second, ":" + Response::userPrefix(client) + " PRIVMSG " + (*itc).second.getNick() + " :" + msg + "\r\n");
+		}
+		log(std::string("client sent message to ").append(targets[i]), client->getId());
 	}
-	log(std::string("client sent message to ").append(channel_name), client->getId());
 }
 
 void Parser::partCommand( Client *client, const std::vector<std::string> &cmd )

@@ -97,7 +97,7 @@ void Response::ERR_BANNEDFROMCHAN( Client *client, const std::string &channel ) 
 void Response::RPL_QUIT( Client *client, Channel *channel, const std::string &message ) { Response::broadcastChannel(client, channel, "QUIT :" + message + "\r\n"); }
 
 // KICK
-void Response::ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel ) { numericReply(client, "482", strtov(1, msg.c_str()), "You're not channel operator"); }
+void Response::ERR_CHANOPRIVSNEEDED( Client *client, const std::string &channel ) { numericReply(client, "482", strtov(1, channel.c_str()), "You're not channel operator"); }
 void Response::RPL_KICK( Client *client, Channel *channel, const std::string &nickname )
 {
 	Response::broadcastChannel(client, channel, "KICK #" + channel->getName() + " " + nickname + "\r\n");
@@ -125,3 +125,6 @@ void Response::RPL_INVITING( Client *client, const std::string &nickname, const 
 	std::string msg = "#" + channel;
 	numericReply(client, "341", strtov(3, client->getNick().c_str(), nickname.c_str(), msg.c_str()), "has been invited");
 }
+
+// PRIVMSG
+void Response::ERR_CANNOTSENDTOCHAN( Client *client, const std::string &channel ) { numericReply(client, "404", strtov(1, channel.c_str()), "Cannot send to channel"); }

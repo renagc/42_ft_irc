@@ -18,8 +18,6 @@
 # define RPL_PONG(nick, user, token) (":" + nick + "!" + user + "@localhost PONG " + token + "\r\n")
 # define RPL_NOTICE(nick, user, target, message) (":" + nick + "!" + user + "@localhost NOTICE " + target + " " + message + "\r\n")
 
-# define RPL_PRIVMSG(nick, user, target, message) (":" + nick + "!" + user + "@localhost PRIVMSG " + target + " :" + message + "\r\n");
-
 // Invalid command
 # define ERR_UNKNOWNCOMMAND(nick, command) (":localhost 421 " + nick + " " + command + " :Unknown command" + "\r\n");
 
@@ -84,6 +82,10 @@ class Response
 		static void ERR_NOSUCHNICK( Client *client, const std::string &nickname );
 		static void ERR_USERONCHANNEL( Client *client, const std::string &nickname, const std::string &channel );
 		static void RPL_INVITING( Client *client, const std::string &nickname, const std::string &channel );
+
+		// PRIVMSG
+		static void ERR_CANNOTSENDTOCHAN( Client *client, const std::string &channel );
+		static void RPL_PRIVMSG( Client *client, const std::string &channel, const std::string &message );
 };
 
 #endif

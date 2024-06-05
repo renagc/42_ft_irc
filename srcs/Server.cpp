@@ -113,11 +113,13 @@ void Server::clientConnection( void )
 		throw std::runtime_error("accept failed");
 	LOG(std::string("got connection from ").append(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
 	temp.events = POLLIN;
+	temp.revents = 0;
 	_pfds.push_back(temp);
 
 	std::map<int, Client>::iterator	it = _clients.find(temp.fd);
 	if (it != _clients.end())
 		return ;
+	fcntl(temp.fd, F_SETFL, O_NONBLOCK);
 	Client	new_client( temp.fd, getNextClientId(), std::string(inet_ntoa((reinterpret_cast<sockaddr_in *>(&their_addr))->sin_addr)));
 	_clients.insert(std::pair<int,Client>(temp.fd,new_client));
 	log(std::string("client logging in"), new_client.getId());
@@ -223,8 +225,23 @@ void Server::knownConnection( int id )
 	}
 	else
 	{
+		bool nc_flag = false;
 		msg.assign(buf, nbytes);
-		std::vector<std::string> parse = split(msg, "\r\n");
+		while (msg.find('\n') == std::string::npos && nbytes > 0)
+		{
+			nbytes = recv(sender_fd, buf, sizeof(buf), 0);
+			if (nbytes == std::string::npos)
+				continue ;
+			msg.append(buf, nbytes);
+			nc_flag = true;
+		}
+		if (msg.find('\r') == std::string::npos)
+			nc_flag = true;
+		std::vector<std::string> parse;
+		if (nc_flag)
+			parse = split(msg, "\n");
+		else
+			parse = split(msg, "\r\n");
 		std::vector<std::string>::iterator it;
 		for (it = parse.begin(); it != parse.end(); it++)
 		{
