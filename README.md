@@ -15,7 +15,7 @@ Internet Relay Chat (IRC) is a protocol for real-time internet text messaging (c
 - **Operators**: Users with special permissions in a channel, such as moderating or changing channel settings.
 - **Modes**: Channel settings that can affect its behavior, such as requiring a password or limiting the number of users.
 
-### Project Structure
+### Directory Structure
     .
     |-- incs
     |   |-- Channel.hpp
