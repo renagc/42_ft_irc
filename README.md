@@ -15,6 +15,26 @@ Internet Relay Chat (IRC) is a protocol for real-time internet text messaging (c
 - **Operators**: Users with special permissions in a channel, such as moderating or changing channel settings.
 - **Modes**: Channel settings that can affect its behavior, such as requiring a password or limiting the number of users.
 
+### Project Structure
+    .
+    |-- incs
+    |   |-- Channel.hpp
+    |   |-- Client.hpp
+    |   |-- Parser.hpp
+    |   |-- Response.hpp
+    |   |-- Server.hpp
+    |   `-- Utils.hpp
+    |-- Makefile
+    |-- README.md
+    `-- srcs
+        |-- Channel.cpp
+        |-- Client.cpp
+        |-- main.cpp
+        |-- Parser.cpp
+        |-- Response.cpp
+        |-- Server.cpp
+        `-- Utils.cpp
+
 ## Features
 
 - **Multi-client Handling**: The server supports multiple concurrent clients without hanging or crashing.
@@ -37,7 +57,7 @@ Internet Relay Chat (IRC) is a protocol for real-time internet text messaging (c
     - `o`: Grant or revoke operator privileges.
     - `l`: Set/remove user limit.
 
-### Executable
+## Executable
 
 - Run the server using `./ircserv <port> <password>`.
   - `port`: Port number for listening to incoming connections.
